@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Product image placeholder">
+  <rect width="800" height="600" fill="#f8fafc"/>
+  <rect x="120" y="100" width="560" height="400" rx="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="4"/>
+  <path d="M270 345h260l-78-92-54 62-42-47-86 77z" fill="#dbeafe"/>
+  <circle cx="310" cy="238" r="34" fill="#bbf7d0"/>
+  <text x="400" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#334155">Battery HUB</text>
+  <text x="400" y="465" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#64748b">Image to be updated</text>
+</svg>

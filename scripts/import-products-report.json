@@ -1,0 +1,60 @@
+{
+  "dataFile": "BatteryHub,pk.xlsx",
+  "rowCount": 38,
+  "importedProducts": 30,
+  "imagesAvailable": 61,
+  "matchedImageCount": 30,
+  "matchedProductCount": 30,
+  "uniqueMatchedImageCount": 60,
+  "matchedImageAssignmentCount": 60,
+  "missingImages": [],
+  "missingSpecs": [],
+  "categoryCounts": {
+    "bms-boards": 1,
+    "power-supplies": 8,
+    "adapters": 2,
+    "batteries": 17,
+    "chargers": 2
+  },
+  "mergedGroups": [
+    {
+      "ids": [
+        "PS-12V-33A-400W",
+        "PS-LED-12V-33A",
+        "PS-RP-12V-33.3A",
+        "PS-SMPS-12V-33A"
+      ],
+      "name": "12V 400W Power Supply"
+    },
+    {
+      "ids": [
+        "PS-RP-12V-8.3A",
+        "PS-WP-12V-8.3A"
+      ],
+      "name": "12V 100W Power Supply"
+    },
+    {
+      "ids": [
+        "BT-LIPO-803040",
+        "BT-LIPO-952439",
+        "BT-LIPO-903242"
+      ],
+      "name": "3.7V 1000mAh LiPo Battery"
+    }
+  ],
+  "skippedProducts": [
+    {
+      "id": "BT-LI-MX-2600",
+      "name": "BT-LI-MX-2600",
+      "reason": "Could not normalize category"
+    }
+  ],
+  "priceOverrides": [
+    {
+      "id": "CHG-TP4056-HW107",
+      "name": "TP4056 Lithium Battery Charger Module with Protection (HW-107)",
+      "spreadsheetPrice": "4000",
+      "usedPrice": "250"
+    }
+  ]
+}
