@@ -3,7 +3,7 @@
 import { FormEvent, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, MessageCircle, Search, ShoppingCart, X } from 'lucide-react';
 import { STORE_CATEGORIES, createWhatsAppLink } from '@/config/store';
 import { products } from '@/data/products';
@@ -15,6 +15,7 @@ const availableStoreCategories = STORE_CATEGORIES.filter((category) =>
 
 const navLinks = [
   { label: 'Home', href: '/' },
+  { label: 'All Products', href: '/products', exact: true },
   ...availableStoreCategories,
   { label: 'Battery Calculator', href: '/calculator' },
   { label: 'Contact', href: '/contact' },
@@ -24,12 +25,13 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
+  const router = useRouter();
   const { itemCount } = useCart();
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const query = searchQuery.trim();
-    window.location.href = query ? `/products?q=${encodeURIComponent(query)}` : '/products';
+    router.push(query ? `/products?q=${encodeURIComponent(query)}` : '/products');
   };
 
   return (
@@ -64,7 +66,7 @@ export default function Navbar() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search batteries, chargers, adapters, power supplies..."
-              className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-950 focus:bg-white"
             />
           </form>
 
@@ -76,7 +78,7 @@ export default function Navbar() {
             >
               <ShoppingCart className="h-5 w-5" />
               {itemCount > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">
                   {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}
@@ -110,7 +112,7 @@ export default function Navbar() {
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search batteries, chargers, adapters..."
-            className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+            className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm outline-none focus:border-slate-950 focus:bg-white"
           />
         </form>
       </div>
@@ -118,14 +120,14 @@ export default function Navbar() {
       <nav className="hidden border-t border-slate-100 bg-white lg:block">
         <div className="container-custom flex items-center gap-1 overflow-x-auto py-2">
           {navLinks.map((link) => {
-            const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+            const isActive = link.href === '/' || ('exact' in link && link.exact) ? pathname === link.href : pathname.startsWith(link.href);
             return (
               <Link
                 key={link.label}
                 href={link.href}
                 className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
+                    ? 'bg-slate-100 text-slate-950'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
                 }`}
               >
@@ -144,7 +146,7 @@ export default function Navbar() {
                 key={link.label}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-blue-700"
+                className="rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
               >
                 {link.label}
               </Link>
@@ -157,7 +159,7 @@ export default function Navbar() {
               <ShoppingCart className="h-4 w-4" />
               Cart
               {itemCount > 0 && (
-                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">
                   {itemCount}
                 </span>
               )}

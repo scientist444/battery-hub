@@ -20,6 +20,15 @@ export interface Product {
   stockStatus: string;
   safetyNote: string;
   featured?: boolean;
+  /** Units on hand, set from the admin panel. Undefined means not tracked. */
+  stockQty?: number;
+}
+
+/** Admin-editable fields stored outside the generated catalog. */
+export interface ProductOverride {
+  price?: number;
+  stock?: number;
+  updatedAt?: string;
 }
 
 export interface CartItem {

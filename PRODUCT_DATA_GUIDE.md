@@ -78,3 +78,28 @@ scripts/import-products-report.json
 
 It reports the source file, imported product count, matched image count, missing images, missing
 spec fields, and category counts. Fix missing images by renaming files to match product IDs or names.
+
+## Admin Panel (price & stock)
+
+The owner can change price and stock without editing code at `/admin`. It has its own login,
+completely separate from the customer store, and is hidden from search engines.
+
+One-time setup in Vercel (Project > Settings / Storage):
+
+1. **Storage > Connect Database > Upstash for Redis** (free tier is enough). This adds
+   `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically.
+2. **Settings > Environment Variables**, add:
+   - `ADMIN_USERNAME` - your admin username
+   - `ADMIN_PASSWORD` - a strong password
+   - `ADMIN_SESSION_SECRET` - random text of at least 32 characters
+3. Redeploy.
+
+How it works:
+
+- Leave a field empty to use the value from `src/data/products.ts`.
+- Stock is a unit count: `0` shows **Sold out** and disables Add to Cart, `1-5` shows
+  **Only N left**, and customers cannot add more than the units in stock.
+- The reset button removes your edit and goes back to the spreadsheet values.
+- Edits are stored in Redis, so running `npm run import:products` again does not overwrite them.
+
+See `.env.example` for the variable list.

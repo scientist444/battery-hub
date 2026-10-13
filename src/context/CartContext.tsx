@@ -1,15 +1,32 @@
 'use client';
 
-import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useRef, ReactNode } from 'react';
 import { CartItem, Product } from '@/types';
+import { parsePrice } from '@/lib/format';
+import { isInStock, maxOrderQty } from '@/lib/stock';
 
-export function parsePrice(price: string): number {
-  const digits = price.replace(/[^0-9]/g, '');
-  return digits ? parseInt(digits, 10) : 0;
+export { parsePrice, formatRupees } from '@/lib/format';
+
+/** Clamp a requested quantity to what is in stock (when stock is tracked). */
+function clampQty(product: Product, quantity: number) {
+  const max = maxOrderQty(product);
+  return max === undefined ? quantity : Math.min(quantity, max);
 }
 
-export function formatRupees(amount: number): string {
-  return 'Rs. ' + amount.toLocaleString('en-PK');
+/** Live price/stock fields the storefront layout passes down. */
+export type CatalogPatch = Pick<Product, 'id' | 'price' | 'stockStatus' | 'stockQty'>;
+
+/** Refresh saved cart snapshots with live prices and stock; drop removed or sold-out items. */
+function syncWithCatalog(items: CartItem[], catalog: CatalogPatch[]): CartItem[] {
+  const byId = new Map(catalog.map((patch) => [patch.id, patch]));
+  return items.flatMap((item) => {
+    const patch = byId.get(item.product.id);
+    if (!patch) return [];
+    const live: Product = { ...item.product, ...patch };
+    if (!isInStock(live)) return [];
+    const quantity = clampQty(live, item.quantity);
+    return quantity > 0 ? [{ product: live, quantity }] : [];
+  });
 }
 
 interface CartState {
@@ -41,19 +58,23 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'ADD_ITEM': {
       const existing = state.items.find((i) => i.product.id === action.product.id);
+      if (!isInStock(action.product)) return state;
       if (existing) {
         return {
           ...state,
           items: state.items.map((i) =>
             i.product.id === action.product.id
-              ? { ...i, quantity: i.quantity + (action.quantity ?? 1) }
+              ? { ...i, quantity: clampQty(action.product, i.quantity + (action.quantity ?? 1)) }
               : i,
           ),
         };
       }
       return {
         ...state,
-        items: [...state.items, { product: action.product, quantity: action.quantity ?? 1 }],
+        items: [
+          ...state.items,
+          { product: action.product, quantity: clampQty(action.product, action.quantity ?? 1) },
+        ],
       };
     }
     case 'REMOVE_ITEM':
@@ -65,7 +86,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return {
         ...state,
         items: state.items.map((i) =>
-          i.product.id === action.productId ? { ...i, quantity: action.quantity } : i,
+          i.product.id === action.productId
+            ? { ...i, quantity: clampQty(i.product, action.quantity) }
+            : i,
         ),
       };
     case 'CLEAR_CART':
@@ -77,18 +100,25 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children, catalog }: { children: ReactNode; catalog: CatalogPatch[] }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });
+  const loaded = useRef(false);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('battery-hub-cart');
-      if (saved) dispatch({ type: 'LOAD_CART', items: JSON.parse(saved) as CartItem[] });
+      if (saved) dispatch({ type: 'LOAD_CART', items: syncWithCatalog(JSON.parse(saved) as CartItem[], catalog) });
     } catch {}
+    loaded.current = true;
+    // Only on mount: later catalog changes arrive with a fresh page load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('battery-hub-cart', JSON.stringify(state.items));
+    if (!loaded.current) return;
+    try {
+      localStorage.setItem('battery-hub-cart', JSON.stringify(state.items));
+    } catch {}
   }, [state.items]);
 
   const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
