@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import { Plus } from 'lucide-react';
 import { products } from '@/data/products';
-import { getOverrides } from '@/lib/catalog';
+import { getCatalogState } from '@/lib/catalog';
 import { getRedis } from '@/lib/redis';
 import { requireAdmin } from '@/lib/admin-session';
-import { ProductManager } from '@/components/admin/ProductManager';
+import { ButtonLink } from '@/components/ui/Button';
+import { ProductManager, type AdminProductRow } from '@/components/admin/ProductManager';
 
 export const metadata: Metadata = { title: 'Products' };
 export const dynamic = 'force-dynamic';
@@ -11,15 +13,33 @@ export const dynamic = 'force-dynamic';
 export default async function AdminProductsPage() {
   await requireAdmin();
   const dbConnected = Boolean(getRedis());
-  const overrides = await getOverrides();
+  const { overrides, customProducts, hiddenIds } = await getCatalogState();
+  const hidden = new Set(hiddenIds);
+
+  const rows: AdminProductRow[] = [
+    ...customProducts.map((product) => ({ product, override: overrides[product.id], custom: true, removed: false })),
+    ...products.map((product) => ({
+      product,
+      override: overrides[product.id],
+      custom: false,
+      removed: hidden.has(product.id),
+    })),
+  ];
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-950">Products</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Update price and stock. Changes go live on the store right after saving.
-        </p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-950">Products</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Add, remove, or update price and stock. Changes go live on the store right after saving.
+          </p>
+        </div>
+        {dbConnected && (
+          <ButtonLink href="/admin/products/new">
+            <Plus className="h-4 w-4" /> Add product
+          </ButtonLink>
+        )}
       </div>
 
       {!dbConnected && (
@@ -30,7 +50,7 @@ export default async function AdminProductsPage() {
         </div>
       )}
 
-      <ProductManager products={products} overrides={overrides} disabled={!dbConnected} />
+      <ProductManager rows={rows} disabled={!dbConnected} />
     </div>
   );
 }

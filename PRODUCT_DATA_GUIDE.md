@@ -100,6 +100,11 @@ How it works:
 - Stock is a unit count: `0` shows **Sold out** and disables Add to Cart, `1-5` shows
   **Only N left**, and customers cannot add more than the units in stock.
 - The reset button removes your edit and goes back to the spreadsheet values.
+- **Add product** creates a new product (name, category, price, stock, specs, photos).
+  Photo upload needs a Vercel **Blob** store connected to the project (Storage tab), which adds
+  `BLOB_READ_WRITE_TOKEN`. Without it, new products use a placeholder image.
+- The bin icon removes a product. Spreadsheet products are only hidden and can be restored;
+  products you added in the admin panel are deleted permanently.
 - Edits are stored in Redis, so running `npm run import:products` again does not overwrite them.
 
 See `.env.example` for the variable list.

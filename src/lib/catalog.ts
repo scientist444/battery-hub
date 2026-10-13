@@ -5,41 +5,82 @@ import { applyOverride } from '@/lib/catalog-merge';
 import { getRedis } from '@/lib/redis';
 
 const OVERRIDES_KEY = 'bh:product-overrides';
+/** Products created from the admin panel, keyed by id. */
+const CUSTOM_PRODUCTS_KEY = 'bh:custom-products';
+/** Ids of spreadsheet products the admin has removed from the store. */
+const HIDDEN_PRODUCTS_KEY = 'bh:hidden-products';
 
-export async function getOverrides(): Promise<Record<string, ProductOverride>> {
+export interface CatalogState {
+  overrides: Record<string, ProductOverride>;
+  customProducts: Product[];
+  hiddenIds: string[];
+}
+
+export async function getCatalogState(): Promise<CatalogState> {
   const redis = getRedis();
-  if (!redis) return {};
+  if (!redis) return { overrides: {}, customProducts: [], hiddenIds: [] };
   try {
-    return (await redis.hgetall<Record<string, ProductOverride>>(OVERRIDES_KEY)) ?? {};
+    const [overrides, custom, hidden] = await Promise.all([
+      redis.hgetall<Record<string, ProductOverride>>(OVERRIDES_KEY),
+      redis.hgetall<Record<string, Product>>(CUSTOM_PRODUCTS_KEY),
+      redis.smembers(HIDDEN_PRODUCTS_KEY),
+    ]);
+    const customProducts = Object.values(custom ?? {}).sort((a, b) => a.name.localeCompare(b.name));
+    return { overrides: overrides ?? {}, customProducts, hiddenIds: hidden ?? [] };
   } catch (error) {
-    console.error('Failed to load product overrides', error);
-    return {};
+    console.error('Failed to load catalog state', error);
+    return { overrides: {}, customProducts: [], hiddenIds: [] };
   }
 }
 
-export async function saveOverride(id: string, override: ProductOverride) {
+function requireRedis() {
   const redis = getRedis();
   if (!redis) throw new Error('Database is not connected.');
-  await redis.hset(OVERRIDES_KEY, { [id]: { ...override, updatedAt: new Date().toISOString() } });
+  return redis;
+}
+
+export async function saveOverride(id: string, override: ProductOverride) {
+  await requireRedis().hset(OVERRIDES_KEY, { [id]: { ...override, updatedAt: new Date().toISOString() } });
 }
 
 export async function deleteOverride(id: string) {
-  const redis = getRedis();
-  if (!redis) throw new Error('Database is not connected.');
-  await redis.hdel(OVERRIDES_KEY, id);
+  await requireRedis().hdel(OVERRIDES_KEY, id);
 }
 
-export function mergeCatalog(overrides: Record<string, ProductOverride>): Product[] {
-  return baseProducts.map((product) => applyOverride(product, overrides[product.id]));
+export async function saveCustomProduct(product: Product) {
+  await requireRedis().hset(CUSTOM_PRODUCTS_KEY, { [product.id]: product });
+}
+
+export async function deleteCustomProduct(id: string) {
+  const redis = requireRedis();
+  await Promise.all([redis.hdel(CUSTOM_PRODUCTS_KEY, id), redis.hdel(OVERRIDES_KEY, id)]);
+}
+
+export async function setProductHidden(id: string, hidden: boolean) {
+  const redis = requireRedis();
+  if (hidden) await redis.sadd(HIDDEN_PRODUCTS_KEY, id);
+  else await redis.srem(HIDDEN_PRODUCTS_KEY, id);
+}
+
+export function isBaseProduct(id: string) {
+  return baseProducts.some((product) => product.id === id);
+}
+
+/** Spreadsheet products (minus removed ones) plus admin-created products, with price/stock edits applied. */
+export function mergeCatalog({ overrides, customProducts, hiddenIds }: CatalogState): Product[] {
+  const hidden = new Set(hiddenIds);
+  return [...baseProducts.filter((product) => !hidden.has(product.id)), ...customProducts].map((product) =>
+    applyOverride(product, overrides[product.id]),
+  );
 }
 
 /**
- * Storefront catalog with admin price/stock edits applied. Read fresh on every request so
- * admin saves show up immediately (one small Redis read per page).
+ * Storefront catalog. Read fresh on every request so admin changes show up immediately
+ * (a few small Redis reads per page).
  */
 export async function getCatalog() {
   noStore();
-  return mergeCatalog(await getOverrides());
+  return mergeCatalog(await getCatalogState());
 }
 
 export async function getProduct(slugOrId: string) {
