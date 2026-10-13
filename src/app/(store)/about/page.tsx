@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { MessageCircle } from 'lucide-react';
-import { OWNERS, createWhatsAppLink } from '@/config/store';
+import { OWNER, createWhatsAppLink } from '@/config/store';
 
 export default function AboutPage() {
   return (
@@ -18,8 +18,8 @@ export default function AboutPage() {
             confirmed through WhatsApp.
           </p>
           <div className="mt-5 rounded-lg bg-slate-50 p-4">
-            <p className="text-sm font-black text-slate-950">Owners</p>
-            <p className="mt-1 text-sm text-slate-600">{OWNERS.join(' & ')}</p>
+            <p className="text-sm font-black text-slate-950">Owner</p>
+            <p className="mt-1 text-sm text-slate-600">{OWNER}</p>
           </div>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <a

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Calculator, MapPin, MessageCircle, Phone } from 'lucide-react';
-import { OWNERS, SERVICE_AREA, WHATSAPP_DISPLAY_NUMBER, createWhatsAppLink } from '@/config/store';
+import { OWNER, SERVICE_AREA, WHATSAPP_DISPLAY_NUMBER, createWhatsAppLink } from '@/config/store';
 
 export default function ContactPage() {
   return (
@@ -61,8 +61,8 @@ export default function ContactPage() {
                 </div>
               </div>
               <div className="rounded-lg bg-slate-50 p-4">
-                <p className="text-sm font-black text-slate-950">Owners</p>
-                <p className="mt-1 text-sm text-slate-600">{OWNERS.join(' & ')}</p>
+                <p className="text-sm font-black text-slate-950">Owner</p>
+                <p className="mt-1 text-sm text-slate-600">{OWNER}</p>
               </div>
             </div>
           </section>

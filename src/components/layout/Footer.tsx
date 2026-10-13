@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MessageCircle, MapPin } from 'lucide-react';
 import {
-  OWNERS,
+  OWNER,
   SERVICE_AREA,
   STORE_CATEGORIES,
   WHATSAPP_DISPLAY_NUMBER,
@@ -41,7 +41,7 @@ export default function Footer() {
             and Rawalpindi.
           </p>
           <p className="mt-4 text-sm font-semibold text-slate-400">
-            Owners: {OWNERS.join(' & ')}
+            Owner: {OWNER}
           </p>
         </div>
 

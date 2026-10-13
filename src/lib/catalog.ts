@@ -1,10 +1,9 @@
-import { unstable_cache } from 'next/cache';
+import { unstable_noStore as noStore } from 'next/cache';
 import { products as baseProducts } from '@/data/products';
 import { Product, ProductCategory, ProductOverride } from '@/types';
 import { applyOverride } from '@/lib/catalog-merge';
 import { getRedis } from '@/lib/redis';
 
-export const CATALOG_TAG = 'catalog';
 const OVERRIDES_KEY = 'bh:product-overrides';
 
 export async function getOverrides(): Promise<Record<string, ProductOverride>> {
@@ -34,12 +33,14 @@ export function mergeCatalog(overrides: Record<string, ProductOverride>): Produc
   return baseProducts.map((product) => applyOverride(product, overrides[product.id]));
 }
 
-/** Storefront catalog with admin price/stock edits applied. Cached until an admin saves. */
-export const getCatalog = unstable_cache(
-  async () => mergeCatalog(await getOverrides()),
-  ['catalog-v1'],
-  { tags: [CATALOG_TAG], revalidate: 3600 },
-);
+/**
+ * Storefront catalog with admin price/stock edits applied. Read fresh on every request so
+ * admin saves show up immediately (one small Redis read per page).
+ */
+export async function getCatalog() {
+  noStore();
+  return mergeCatalog(await getOverrides());
+}
 
 export async function getProduct(slugOrId: string) {
   const catalog = await getCatalog();

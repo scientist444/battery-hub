@@ -1,7 +1,7 @@
 export const WHATSAPP_NUMBER = '923203540318';
 export const WHATSAPP_DISPLAY_NUMBER = '03203540318';
 export const SERVICE_AREA = 'Islamabad & Rawalpindi';
-export const OWNERS = ['Muhammad Umer Sajid', 'Muhammad Owais Rafeeq'];
+export const OWNER = 'Muhammad Umer Sajid';
 
 export const STORE_CATEGORIES = [
   {

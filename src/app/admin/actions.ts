@@ -3,10 +3,10 @@
 import { createHash, timingSafeEqual } from 'crypto';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { ADMIN_COOKIE, SESSION_TTL_SECONDS, createSessionToken, isAdminConfigured } from '@/lib/auth';
 import { requireAdmin } from '@/lib/admin-session';
-import { CATALOG_TAG, deleteOverride, saveOverride } from '@/lib/catalog';
+import { deleteOverride, saveOverride } from '@/lib/catalog';
 import { getRedis } from '@/lib/redis';
 import { products } from '@/data/products';
 
@@ -81,7 +81,6 @@ function parseWholeNumber(value: FormDataEntryValue | null) {
 }
 
 function refreshStorefront() {
-  revalidateTag(CATALOG_TAG);
   revalidatePath('/', 'layout');
 }
 
