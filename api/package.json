@@ -1,0 +1,28 @@
+{
+  "name": "battery-hub-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BatteryHUB backend: Azure Functions (Consumption plan) + Cosmos DB",
+  "main": "dist/src/functions/*.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "tsc && node --test \"dist/test/**/*.test.js\"",
+    "start": "func start",
+    "seed": "tsc && node dist/scripts/build-seed.js"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.1.1",
+    "@azure/functions": "^4.6.0",
+    "@azure/identity": "^4.5.0",
+    "@azure/keyvault-secrets": "^4.9.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

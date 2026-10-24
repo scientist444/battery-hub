@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "COSMOS_ENDPOINT": "https://cosmos-batteryhub-prod-txyfw6k32lguk.documents.azure.com:443/",
+    "COSMOS_DATABASE": "batteryhub",
+    "KEY_VAULT_URI": "https://kv-batteryhub-prod-txyfw.vault.azure.net/",
+    "ORDERS_QUEUE": "orders-to-book"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": { "value": "batteryhub" },
+    "env": { "value": "prod" },
+    "allowedOrigins": { "value": [ "https://batteryhub.com.pk", "https://www.batteryhub.com.pk" ] },
+    "monthlyBudgetUsd": { "value": 8 },
+    "budgetEmails": { "value": [ "umersajid20208@gmail.com" ] },
+    "deployBudget": { "value": true },
+    "useCosmosFreeTier": { "value": true }
+  }
+}
