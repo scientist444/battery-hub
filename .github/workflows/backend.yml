@@ -65,3 +65,14 @@ jobs:
           app-name: ${{ env.FUNCTION_APP }}
           package: backend
           respect-funcignore: true
+      - name: Smoke test
+        run: |
+          url="https://${FUNCTION_APP}.azurewebsites.net/api/health"
+          for i in $(seq 1 12); do
+            body=$(curl -sS -m 60 -w ' HTTP %{http_code}' "$url" || true)
+            echo "$body"
+            case "$body" in *'"ok":true'*) exit 0 ;; esac
+            sleep 15
+          done
+          echo "::error::Health check did not pass: $url"
+          exit 1
