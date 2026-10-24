@@ -35,6 +35,12 @@ export default function CustomGuidancePage() {
               Use Calculator
             </Link>
           </div>
+          <p className="mt-4 text-sm text-slate-600">
+            Buying in quantity for a business, lab or student group?{' '}
+            <Link href="/bulk-order" className="font-semibold text-blue-700 hover:underline">
+              Request a bulk quote
+            </Link>
+          </p>
         </div>
       </div>
     </div>

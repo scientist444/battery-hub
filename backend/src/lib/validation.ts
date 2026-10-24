@@ -147,3 +147,23 @@ export const reviewStatusSchema = z.object({
   productId: z.string().min(1).max(120),
   status: z.enum(['approved', 'hidden']),
 });
+
+export const stockAlertSchema = z.object({
+  productId: z.string().trim().min(1).max(120),
+  productName: z.string().trim().min(1).max(200),
+  name: z.string().trim().max(80).optional(),
+  phone: pkMobile,
+});
+
+export const quoteRequestSchema = z.object({
+  name: z.string().trim().min(2, 'Enter your name.').max(80),
+  phone: pkMobile,
+  organization: z.string().trim().max(120).optional(),
+  city: z.string().trim().min(2, 'Enter your city.').max(60),
+  details: z.string().trim().min(10, 'Tell us which products and quantities you need.').max(2000),
+});
+
+export const requestStatusSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('alert'), productId: z.string().min(1).max(120), status: z.enum(['waiting', 'notified']) }),
+  z.object({ kind: z.literal('quote'), status: z.enum(['new', 'done']) }),
+]);

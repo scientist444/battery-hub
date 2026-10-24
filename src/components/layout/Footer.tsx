@@ -15,6 +15,9 @@ const supportLinks = [
   { label: 'Battery Safety Guide', href: '/blog' },
   { label: 'Contact', href: '/contact' },
   { label: 'WhatsApp Order', href: createWhatsAppLink('Assalam o Alaikum, I want to place an order.') },
+  { label: 'Bulk & wholesale orders', href: '/bulk-order' },
+  { label: 'Shipping & delivery', href: '/policies/shipping' },
+  { label: 'Returns & warranty', href: '/policies/returns' },
 ];
 
 export default function Footer({ copy }: { copy: DeliveryCopy }) {
@@ -93,8 +96,16 @@ export default function Footer({ copy }: { copy: DeliveryCopy }) {
       </div>
 
       <div className="border-t border-slate-800">
-        <div className="container-custom py-5 text-xs text-slate-500">
-          Copyright 2026 Battery HUB. {copy.footerNote}
+        <div className="container-custom flex flex-col justify-between py-5 text-xs text-slate-500 sm:flex-row sm:items-center">
+          <span>Copyright 2026 Battery HUB. {copy.footerNote}</span>
+          <span className="mt-2 flex flex-wrap gap-x-4 gap-y-1 sm:mt-0">
+            <Link href="/policies/privacy" className="hover:text-white">
+              Privacy
+            </Link>
+            <Link href="/policies/terms" className="hover:text-white">
+              Terms
+            </Link>
+          </span>
         </div>
       </div>
     </footer>

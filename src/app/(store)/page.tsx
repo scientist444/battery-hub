@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getCatalog } from '@/lib/catalog';
 import { isInStock } from '@/lib/stock';
-import { STORE_CATEGORIES, deliveryCopy } from '@/config/store';
+import { SITE_URL, STORE_CATEGORIES, WHATSAPP_NUMBER, deliveryCopy } from '@/config/store';
 import { isCheckoutEnabled } from '@/lib/backend';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { ProductGrid, ProductRail } from '@/components/shop/ProductGrid';
@@ -37,8 +37,22 @@ export default async function HomePage() {
   const copy = deliveryCopy(isCheckoutEnabled());
   const bestSellers = available.filter((p) => p.featured).slice(0, 8);
 
+  // Business details for search engines (name, logo, contact, rating).
+  const organization = {
+    '@context': 'https://schema.org',
+    '@type': 'OnlineStore',
+    name: 'Battery HUB',
+    url: SITE_URL,
+    logo: `${SITE_URL}/BH%20LOGO.png`,
+    contactPoint: { '@type': 'ContactPoint', telephone: `+${WHATSAPP_NUMBER}`, contactType: 'customer service', areaServed: 'PK' },
+    ...(reviews.overall.count > 0 && {
+      aggregateRating: { '@type': 'AggregateRating', ratingValue: reviews.overall.average, reviewCount: reviews.overall.count },
+    }),
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization).replace(/</g, '\\u003c') }} />
       <HeroBanner spotlight={spotlight.length ? spotlight : available.slice(0, 3)} copy={copy} />
       <ValueProps copy={copy} />
 

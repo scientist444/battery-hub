@@ -8,8 +8,9 @@ import { isInStock, maxOrderQty } from '@/lib/stock';
 import { QuantitySelector } from '@/components/ui/QuantitySelector';
 import { ExternalButtonLink } from '@/components/ui/Button';
 import { AddToCartButton } from '@/components/shop/AddToCartButton';
+import { NotifyMe } from '@/components/shop/NotifyMe';
 
-export function ProductPurchase({ product }: { product: Product }) {
+export function ProductPurchase({ product, notifyEnabled = false }: { product: Product; notifyEnabled?: boolean }) {
   const [quantity, setQuantity] = useState(1);
   const inStock = isInStock(product);
 
@@ -22,6 +23,7 @@ export function ProductPurchase({ product }: { product: Product }) {
         </div>
       )}
       <AddToCartButton product={product} quantity={quantity} size="lg" />
+      {!inStock && notifyEnabled && <NotifyMe productId={product.id} productName={product.name} />}
       <ExternalButtonLink href={createWhatsAppLink(product.whatsappText)} variant="whatsapp" size="lg" fullWidth>
         <MessageCircle className="h-4 w-4" />
         {inStock ? 'Order on WhatsApp' : 'Ask when back in stock'}

@@ -271,3 +271,32 @@ export interface Review {
   createdAt: string;
   updatedAt: string;
 }
+
+/** "Notify me" request for a sold-out product. Partition value `alert:<productId>`. */
+export interface StockAlert {
+  id: string;
+  phone: string;
+  type: 'stock-alert';
+  productId: string;
+  productName: string;
+  name?: string;
+  contactPhone: string;
+  status: 'waiting' | 'notified';
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Bulk / wholesale quote request. Partition value `quote`. */
+export interface QuoteRequest {
+  id: string;
+  phone: 'quote';
+  type: 'quote';
+  name: string;
+  contactPhone: string;
+  organization?: string;
+  city: string;
+  details: string;
+  status: 'new' | 'done';
+  createdAt: string;
+  updatedAt: string;
+}

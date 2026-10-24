@@ -8,6 +8,11 @@ import { ButtonLink } from '@/components/ui/Button';
 import { isBackendAdminEnabled } from '@/lib/backend';
 import { SyncCatalogButton } from '@/components/admin/SyncCatalogButton';
 import { ProductManager, type AdminProductRow } from '@/components/admin/ProductManager';
+import { LowStockAlert } from '@/components/admin/LowStockAlert';
+import { getRequests } from '@/app/admin/backend-actions';
+import { apiProductId } from '@/lib/backend';
+import { applyOverride } from '@/lib/catalog-merge';
+import { LOW_STOCK_THRESHOLD } from '@/lib/stock';
 
 export const metadata: Metadata = { title: 'Products' };
 export const dynamic = 'force-dynamic';
@@ -28,8 +33,25 @@ export default async function AdminProductsPage() {
     })),
   ];
 
+  // Products running low (stock is only tracked once set in the admin), and how many customers wait for each.
+  const waiting: Record<string, number> = {};
+  if (isBackendAdminEnabled()) {
+    try {
+      for (const alert of (await getRequests()).alerts) waiting[alert.productId] = (waiting[alert.productId] ?? 0) + 1;
+    } catch (error) {
+      console.error('Stock alerts unavailable', error);
+    }
+  }
+  const lowStock = rows
+    .filter((row) => !row.removed)
+    .map((row) => applyOverride(row.product, row.override))
+    .filter((product) => typeof product.stockQty === 'number' && product.stockQty <= LOW_STOCK_THRESHOLD)
+    .map((product) => ({ name: product.name, stock: product.stockQty!, waiting: waiting[apiProductId(product.id)] ?? 0 }))
+    .sort((a, b) => a.stock - b.stock);
+
   return (
     <div>
+      <LowStockAlert items={lowStock} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-950">Products</h1>
