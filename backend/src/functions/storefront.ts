@@ -3,6 +3,7 @@ import { join } from 'path';
 import { app, output } from '@azure/functions';
 import { getCategories, getProducts, publicProduct } from '../lib/catalog';
 import { getCities, quoteContext } from '../lib/context';
+import { getSecret } from '../lib/secrets';
 import { HttpError, json, parseBody, route } from '../lib/http';
 import { createOrder, findOrderByNumber } from '../lib/orders';
 import { buildQuote, publicQuote } from '../lib/quote';
@@ -27,7 +28,12 @@ app.http('health', {
   handler: async (_request, context) => {
     try {
       const products = await getProducts();
-      return json({ ok: true, products: products.length, version: VERSION });
+      // Key Vault is needed for every keyed route; report whether the API keys can be read (never their values).
+      const keys = await getSecret('admin-api-key').then(
+        (value) => (value ? 'ok' : 'missing'),
+        (error: { code?: string; statusCode?: number; name?: string }) => String(error.code ?? error.statusCode ?? error.name ?? 'error'),
+      );
+      return json({ ok: true, products: products.length, keys, version: VERSION });
     } catch (error) {
       context.error('Health check failed', error);
       // Error code only (no message or data), to tell configuration problems from outages.
