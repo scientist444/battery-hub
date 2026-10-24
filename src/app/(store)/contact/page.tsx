@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { Calculator, MapPin, MessageCircle, Phone } from 'lucide-react';
-import { OWNER, SERVICE_AREA, WHATSAPP_DISPLAY_NUMBER, createWhatsAppLink } from '@/config/store';
+import { OWNER, WHATSAPP_DISPLAY_NUMBER, createWhatsAppLink, deliveryCopy } from '@/config/store';
+import { isCheckoutEnabled } from '@/lib/backend';
 
 export default function ContactPage() {
+  const copy = deliveryCopy(isCheckoutEnabled());
   return (
     <div className="bg-slate-50 py-12 lg:py-16">
       <div className="container-custom">
@@ -50,14 +52,14 @@ export default function ContactPage() {
                 <MapPin className="mt-0.5 h-5 w-5 text-blue-600" />
                 <div>
                   <p className="text-sm font-black text-slate-950">Service Area</p>
-                  <p className="mt-1 text-sm text-slate-600">{SERVICE_AREA}</p>
+                  <p className="mt-1 text-sm text-slate-600">{copy.serviceArea}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 rounded-lg bg-slate-50 p-4">
                 <Phone className="mt-0.5 h-5 w-5 text-orange-600" />
                 <div>
                   <p className="text-sm font-black text-slate-950">Order Method</p>
-                  <p className="mt-1 text-sm text-slate-600">Orders confirmed through WhatsApp only.</p>
+                  <p className="mt-1 text-sm text-slate-600">{copy.orderMethod}</p>
                 </div>
               </div>
               <div className="rounded-lg bg-slate-50 p-4">

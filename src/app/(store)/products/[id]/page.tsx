@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, ShieldAlert, Truck, Wallet } from 'lucide-react';
 import { categoryLabels } from '@/data/products';
-import { getStoreCategory } from '@/config/store';
+import { type DeliveryCopy, deliveryCopy, getStoreCategory } from '@/config/store';
+import { isCheckoutEnabled } from '@/lib/backend';
 import { getCatalog, getProduct } from '@/lib/catalog';
 import { StockBadge } from '@/components/ui/StockBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
@@ -23,9 +24,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   return { title: product.name, description: product.description.slice(0, 160) };
 }
 
-const perks = [
-  { icon: Truck, text: 'Bykea delivery across Islamabad & Rawalpindi' },
-  { icon: Wallet, text: 'Pay via SadaPay, confirm on WhatsApp' },
+const perkList = (copy: DeliveryCopy) => [
+  { icon: Truck, text: copy.delivery },
+  { icon: Wallet, text: copy.paymentPerk },
   { icon: MapPin, text: 'Local support for wiring & compatibility' },
 ];
 
@@ -72,7 +73,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             </div>
 
             <ul className="mt-6 space-y-3 rounded-lg bg-slate-50 p-4">
-              {perks.map(({ icon: Icon, text }) => (
+              {perkList(deliveryCopy(isCheckoutEnabled())).map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-3 text-sm text-slate-700">
                   <Icon className="h-4 w-4 shrink-0 text-slate-950" />
                   {text}

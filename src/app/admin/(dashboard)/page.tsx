@@ -5,6 +5,8 @@ import { getCatalogState } from '@/lib/catalog';
 import { getRedis } from '@/lib/redis';
 import { requireAdmin } from '@/lib/admin-session';
 import { ButtonLink } from '@/components/ui/Button';
+import { isBackendAdminEnabled } from '@/lib/backend';
+import { SyncCatalogButton } from '@/components/admin/SyncCatalogButton';
 import { ProductManager, type AdminProductRow } from '@/components/admin/ProductManager';
 
 export const metadata: Metadata = { title: 'Products' };
@@ -35,11 +37,14 @@ export default async function AdminProductsPage() {
             Add, remove, or update price and stock. Changes go live on the store right after saving.
           </p>
         </div>
-        {dbConnected && (
-          <ButtonLink href="/admin/products/new">
-            <Plus className="h-4 w-4" /> Add product
-          </ButtonLink>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isBackendAdminEnabled() && <SyncCatalogButton />}
+          {dbConnected && (
+            <ButtonLink href="/admin/products/new">
+              <Plus className="h-4 w-4" /> Add product
+            </ButtonLink>
+          )}
+        </div>
       </div>
 
       {!dbConnected && (

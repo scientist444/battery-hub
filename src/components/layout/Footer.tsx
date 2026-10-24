@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { MessageCircle, MapPin } from 'lucide-react';
 import {
   OWNER,
-  SERVICE_AREA,
+  type DeliveryCopy,
   STORE_CATEGORIES,
   WHATSAPP_DISPLAY_NUMBER,
   createWhatsAppLink,
@@ -17,7 +17,7 @@ const supportLinks = [
   { label: 'WhatsApp Order', href: createWhatsAppLink('Assalam o Alaikum, I want to place an order.') },
 ];
 
-export default function Footer() {
+export default function Footer({ copy }: { copy: DeliveryCopy }) {
   const availableCategories = STORE_CATEGORIES.filter((category) =>
     products.some((product) => product.category === category.id),
   );
@@ -37,8 +37,8 @@ export default function Footer() {
             <span className="text-xl font-black">Battery HUB</span>
           </Link>
           <p className="max-w-sm text-sm leading-6 text-slate-300">
-            Battery and power solutions for projects, students, and electronics users in Islamabad
-            and Rawalpindi.
+            Battery and power solutions for projects, students, and electronics users.{' '}
+            {copy.collectionNote}
           </p>
           <p className="mt-4 text-sm font-semibold text-slate-400">
             Owner: {OWNER}
@@ -61,7 +61,7 @@ export default function Footer() {
         <div>
           <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-200">Support</h3>
           <ul className="space-y-3">
-            {supportLinks.map((link) => (
+            {[...(copy.trackOrders ? [{ label: 'Track your order', href: '/track' }] : []), ...supportLinks].map((link) => (
               <li key={link.label}>
                 <Link href={link.href} className="text-sm text-slate-400 transition hover:text-white">
                   {link.label}
@@ -85,16 +85,16 @@ export default function Footer() {
             </a>
             <div className="flex items-center gap-3">
               <MapPin className="h-4 w-4 text-blue-300" />
-              Service Area: {SERVICE_AREA}
+              Service Area: {copy.serviceArea}
             </div>
-            <p>Orders confirmed through WhatsApp.</p>
+            <p>{copy.orderMethod}</p>
           </div>
         </div>
       </div>
 
       <div className="border-t border-slate-800">
         <div className="container-custom py-5 text-xs text-slate-500">
-          Copyright 2026 Battery HUB. WhatsApp-only ordering for Islamabad &amp; Rawalpindi.
+          Copyright 2026 Battery HUB. {copy.footerNote}
         </div>
       </div>
     </footer>

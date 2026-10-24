@@ -1,5 +1,6 @@
 import { getCatalog } from '@/lib/catalog';
-import { getStoreCategory } from '@/config/store';
+import { isCheckoutEnabled } from '@/lib/backend';
+import { deliveryCopy, getStoreCategory } from '@/config/store';
 import { ProductCategory } from '@/types';
 import ProductListing from '@/components/products/ProductListing';
 
@@ -21,7 +22,7 @@ export default async function CollectionPage({ category, query = '' }: Collectio
       title={info?.label ?? 'All products'}
       description={
         info?.description ??
-        'Batteries, chargers, power supplies, adapters and BMS boards. Delivered across Islamabad & Rawalpindi.'
+        `Batteries, chargers, power supplies, adapters and BMS boards. ${deliveryCopy(isCheckoutEnabled()).collectionNote}`
       }
       initialQuery={query}
     />

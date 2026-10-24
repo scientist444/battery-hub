@@ -47,7 +47,7 @@ export const supplierSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{2,40}$/, 'Use lowercase letters, numbers and dashes.'),
   name: z.string().trim().min(2).max(100),
   contactName: z.string().trim().max(80).optional(),
-  phone: pkMobile,
+  phone: pkMobile.optional(),
   whatsapp: pkMobile.optional(),
   email: z.string().email().optional(),
   locations: z.array(supplierLocation).min(1),
@@ -92,4 +92,25 @@ export const statusChangeSchema = z.object({
 export const manualTrackingSchema = z.object({
   shipmentIndex: z.number().int().min(0),
   trackingNumber: z.string().trim().min(4).max(40),
+});
+
+/** Storefront-owned product fields, pushed by the website admin. Shipping fields (weight, box, suppliers) stay as set in the API. */
+export const catalogSyncSchema = z.object({
+  products: z
+    .array(
+      productSchema.pick({
+        id: true,
+        categoryId: true,
+        slug: true,
+        name: true,
+        description: true,
+        specs: true,
+        safetyNote: true,
+        images: true,
+        pricePkr: true,
+        stock: true,
+        featured: true,
+      }),
+    )
+    .max(2000),
 });

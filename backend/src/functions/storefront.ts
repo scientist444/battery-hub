@@ -31,7 +31,6 @@ app.http('health', {
     } catch (error) {
       context.error('Health check failed', error);
       // Error code only (no message or data), to tell configuration problems from outages.
-      // Error code only (no message or data), to tell configuration problems from outages.
       const e = (error ?? {}) as { code?: string | number; name?: string };
       return json({ ok: false, version: VERSION, error: String(e.code ?? e.name ?? 'unknown') }, 503);
     }
