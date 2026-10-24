@@ -96,6 +96,8 @@ export interface AdminOrder {
   subtotalPkr: number;
   deliveryFeePkr: number;
   totalPkr: number;
+  paymentMethod: string;
+  paymentStatus: string;
   notes?: string;
 }
 

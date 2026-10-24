@@ -72,7 +72,9 @@ export function TrackOrder({ initialOrder }: { initialOrder: string }) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-xs text-slate-500">Order {order.orderNumber}</p>
-              <p className="text-xl font-bold text-slate-950">{label(order.status)}</p>
+              <p className="text-xl font-bold text-slate-950">
+                {order.paymentMethod !== 'cod' && order.paymentStatus !== 'paid' && order.status === 'on_hold' ? 'Waiting for payment' : label(order.status)}
+              </p>
             </div>
             <p className="text-sm text-slate-600">
               {formatRupees(order.totalPkr)} · {new Date(order.placedAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}

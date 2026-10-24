@@ -112,6 +112,7 @@ app.http('placeOrder', {
       { ...body.customer, cityName: city.name, province: city.province },
       body.notes,
       ctx.settings,
+      body.paymentMethod,
     );
 
     if (order.status === 'confirmed' && ctx.settings.courierMode === 'trax' && ctx.settings.autoBook) {
@@ -148,6 +149,8 @@ app.http('trackOrder', {
     return json({
       orderNumber: order.number,
       status: order.status,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
       placedAt: order.createdAt,
       totalPkr: order.totalPkr,
       items: order.items.map((i) => ({ name: i.name, qty: i.qty })),

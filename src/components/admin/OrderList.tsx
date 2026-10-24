@@ -7,6 +7,8 @@ import { formatRupees } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 
+const PAYMENT_LABELS: Record<string, string> = { cod: 'COD', jazzcash: 'JazzCash', bank: 'HBL', sadapay: 'SadaPay' };
+
 const STATUS_STYLES: Record<string, string> = {
   on_hold: 'bg-amber-100 text-amber-900',
   confirmed: 'bg-blue-100 text-blue-900',
@@ -48,7 +50,14 @@ function OrderCard({ order }: { order: AdminOrder }) {
           {order.holdReason && <p className="mt-1 text-xs text-amber-800">On hold: {order.holdReason}</p>}
         </div>
         <div className="text-right text-sm">
-          <p className="font-bold text-slate-950">COD {formatRupees(order.totalPkr)}</p>
+          <p className="font-bold text-slate-950">
+            {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod} {formatRupees(order.totalPkr)}
+            {order.paymentMethod !== 'cod' && (
+              <span className={cn('ml-1 rounded-full px-2 py-0.5 text-xs', order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900')}>
+                {order.paymentStatus === 'paid' ? 'paid' : 'not paid yet'}
+              </span>
+            )}
+          </p>
           <p className="text-xs text-slate-500">
             {formatRupees(order.subtotalPkr)} + {formatRupees(order.deliveryFeePkr)} delivery
           </p>
@@ -113,7 +122,7 @@ function OrderCard({ order }: { order: AdminOrder }) {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {order.status === 'on_hold' && (
             <Button size="sm" disabled={pending} onClick={() => run(() => setOrderStatus(order.id, 'confirmed'))}>
-              Confirm order
+              {order.paymentMethod === 'cod' ? 'Confirm order' : 'Payment received, confirm'}
             </Button>
           )}
           {order.status !== 'on_hold' && (

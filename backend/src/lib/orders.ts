@@ -3,7 +3,7 @@ import { container, isConflict, queryAll, readDoc } from './cosmos';
 import { HttpError } from './http';
 import { invalidateCatalog } from './catalog';
 import { Quote } from './quote';
-import { Customer, Order, OrderCustomer, OrderStatus, Product, StoreSettings } from './types';
+import { Customer, Order, OrderCustomer, OrderStatus, PaymentMethod, Product, StoreSettings } from './types';
 
 const MAX_RETRIES = 5;
 
@@ -69,8 +69,15 @@ export function holdReason(totalPkr: number, customer: Pick<Customer, 'refusedCo
   return undefined;
 }
 
-export async function createOrder(quote: Quote, customer: OrderCustomer, notes: string | undefined, settings: StoreSettings): Promise<Order> {
-  if (quote.totalPkr > settings.maxCodPkr) {
+export async function createOrder(
+  quote: Quote,
+  customer: OrderCustomer,
+  notes: string | undefined,
+  settings: StoreSettings,
+  paymentMethod: PaymentMethod = 'cod',
+): Promise<Order> {
+  const prepaid = paymentMethod !== 'cod';
+  if (!prepaid && quote.totalPkr > settings.maxCodPkr) {
     throw new HttpError(409, `Cash on delivery is available for orders up to Rs. ${settings.maxCodPkr}. Please contact us on WhatsApp for larger orders.`);
   }
 
@@ -84,7 +91,8 @@ export async function createOrder(quote: Quote, customer: OrderCustomer, notes: 
     }
 
     const [number, customerDoc] = await Promise.all([nextOrderNumber(), upsertCustomer(customer)]);
-    const reason = holdReason(quote.totalPkr, customerDoc, settings);
+    // Advance payments wait until the payment is seen in the account; the admin then confirms the order.
+    const reason = prepaid ? 'Waiting for payment.' : holdReason(quote.totalPkr, customerDoc, settings);
     const status: OrderStatus = reason ? 'on_hold' : 'confirmed';
     const now = new Date().toISOString();
     const courier = settings.courierMode === 'trax' ? 'trax' : 'manual';
@@ -111,12 +119,12 @@ export async function createOrder(quote: Quote, customer: OrderCustomer, notes: 
         serviceCode: s.chosen.code,
         weightG: s.weightG,
         // Each parcel collects its own products plus its own delivery charge.
-        codAmountPkr: s.subtotalPkr + s.chosen.feePkr,
+        codAmountPkr: prepaid ? 0 : s.subtotalPkr + s.chosen.feePkr,
         quotedFeePkr: s.chosen.feePkr,
         status,
         events: [],
       })),
-      paymentMethod: 'cod',
+      paymentMethod,
       paymentStatus: 'pending',
       subtotalPkr: quote.subtotalPkr,
       deliveryFeePkr: quote.deliveryFeePkr,
