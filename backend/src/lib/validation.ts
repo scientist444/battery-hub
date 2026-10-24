@@ -21,6 +21,7 @@ export const quoteSchema = z.object({
 export const orderSchema = z.object({
   items: cartSchema,
   service: z.string().optional(),
+  paymentMethod: z.enum(['cod', 'jazzcash', 'bank']).default('cod'),
   customer: z.object({
     name: z.string().trim().min(2).max(80),
     phone: pkMobile,

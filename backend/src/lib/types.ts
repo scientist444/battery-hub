@@ -177,6 +177,9 @@ export interface OrderCustomer {
   landmark?: string;
 }
 
+/** Cash on delivery, or paid in advance to the store's JazzCash or bank account. */
+export type PaymentMethod = 'cod' | 'jazzcash' | 'bank' | 'sadapay';
+
 export interface Order {
   id: string;
   number: string;
@@ -185,7 +188,7 @@ export interface Order {
   customer: OrderCustomer;
   items: OrderItem[];
   shipments: Shipment[];
-  paymentMethod: 'cod' | 'sadapay';
+  paymentMethod: PaymentMethod;
   paymentStatus: 'pending' | 'paid' | 'remitted';
   subtotalPkr: number;
   deliveryFeePkr: number;

@@ -132,6 +132,6 @@ export function publicQuote(quote: Quote) {
     subtotalPkr: quote.subtotalPkr,
     deliveryFeePkr: quote.deliveryFeePkr,
     totalPkr: quote.totalPkr,
-    paymentMethods: ['cod'],
+    paymentMethods: ['cod', 'jazzcash', 'bank'],
   };
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { AlertCircle, Banknote, CheckCircle2, Loader2, PackageCheck, ShoppingCart, Truck } from 'lucide-react';
+import { AlertCircle, Banknote, Building2, CheckCircle2, Copy, Loader2, MessageCircle, PackageCheck, ShoppingCart, Smartphone, Truck } from 'lucide-react';
 import { useCart, formatRupees, parsePrice } from '@/context/CartContext';
 import {
   type CheckoutCity,
@@ -13,6 +13,7 @@ import {
 } from '@/app/(store)/checkout/actions';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
+import { PAYMENT_OPTIONS, type PaymentMethod, createWhatsAppLink } from '@/config/store';
 
 const DETAILS_KEY = 'battery-hub-checkout-details';
 
@@ -51,6 +52,7 @@ export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; 
   const [placing, startPlacing] = useTransition();
   const [orderError, setOrderError] = useState<string>();
   const [placed, setPlaced] = useState<PlacedOrder>();
+  const [payment, setPayment] = useState<PaymentMethod>('cod');
   const quoteRequest = useRef(0);
 
   // Remember the customer's details on this device for next time (not the notes).
@@ -97,6 +99,7 @@ export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; 
         items: lines,
         customer: { ...customer, email: customer.email || undefined, landmark: customer.landmark || undefined },
         notes,
+        paymentMethod: payment,
         expectedTotalPkr: quote.totalPkr,
       });
       if (result.ok) {
@@ -125,13 +128,21 @@ export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; 
         <div className="mt-6 space-y-2 rounded-xl bg-slate-50 p-4 text-left text-sm">
           <Row label="Products" value={formatRupees(placed.subtotalPkr)} />
           <Row label="Delivery" value={formatRupees(placed.deliveryFeePkr)} />
-          <Row label="Pay on delivery (cash)" value={formatRupees(placed.totalPkr)} strong />
+          <Row
+            label={placed.paymentMethod === 'cod' ? 'Pay on delivery (cash)' : `Pay now (${PAYMENT_OPTIONS[placed.paymentMethod as PaymentMethod]?.label ?? 'advance'})`}
+            value={formatRupees(placed.totalPkr)}
+            strong
+          />
         </div>
-        <p className="mt-4 text-sm text-slate-600">
-          {placed.status === 'on_hold'
-            ? 'We will call you on your number to confirm this order before we dispatch it.'
-            : 'We will send your parcel by courier and share the tracking number. Keep the cash amount ready on delivery.'}
-        </p>
+        {placed.paymentMethod === 'jazzcash' || placed.paymentMethod === 'bank' ? (
+          <PayNow method={placed.paymentMethod} orderNumber={placed.orderNumber} totalPkr={placed.totalPkr} />
+        ) : (
+          <p className="mt-4 text-sm text-slate-600">
+            {placed.status === 'on_hold'
+              ? 'We will call you on your number to confirm this order before we dispatch it.'
+              : 'We will send your parcel by courier and share the tracking number. Keep the cash amount ready on delivery.'}
+          </p>
+        )}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link
             href={`/track?order=${encodeURIComponent(placed.orderNumber)}`}
@@ -237,13 +248,35 @@ export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; 
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-bold text-slate-950">3. Payment</h2>
-          <div className="flex items-center gap-3 rounded-xl border-2 border-blue-600 bg-blue-50 p-4">
-            <Banknote className="h-6 w-6 text-blue-700" />
-            <div>
-              <p className="text-sm font-bold text-slate-950">Cash on Delivery</p>
-              <p className="text-xs text-slate-600">Pay the courier in cash when your parcel arrives.</p>
-            </div>
+          <div className="space-y-2" role="radiogroup" aria-label="Payment method">
+            {(Object.keys(PAYMENT_OPTIONS) as PaymentMethod[]).map((method) => {
+              const option = PAYMENT_OPTIONS[method];
+              const Icon = method === 'cod' ? Banknote : method === 'jazzcash' ? Smartphone : Building2;
+              const selected = payment === method;
+              return (
+                <label
+                  key={method}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition',
+                    selected ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300',
+                  )}
+                >
+                  <input type="radio" name="payment" value={method} checked={selected} onChange={() => setPayment(method)} className="sr-only" />
+                  <Icon className={cn('h-6 w-6', selected ? 'text-blue-700' : 'text-slate-400')} />
+                  <div>
+                    <p className="text-sm font-bold text-slate-950">{option.label}</p>
+                    <p className="text-xs text-slate-600">{option.hint}</p>
+                  </div>
+                </label>
+              );
+            })}
           </div>
+          {payment !== 'cod' && (
+            <p className="mt-3 text-xs leading-5 text-slate-600">
+              After you place the order, we show the account details. Send the payment, then send us the screenshot on WhatsApp
+              with your order number. We dispatch once the payment is received.
+            </p>
+          )}
         </section>
       </div>
 
@@ -300,7 +333,9 @@ export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; 
             {placing ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4" />}
             {placing ? 'Placing order…' : quote ? `Place order · ${formatRupees(quote.totalPkr)}` : 'Place order'}
           </Button>
-          <p className="mt-2 text-center text-xs text-slate-400">Cash on delivery. No advance payment needed.</p>
+          <p className="mt-2 text-center text-xs text-slate-400">
+            {payment === 'cod' ? 'Cash on delivery. No advance payment needed.' : `Pay by ${PAYMENT_OPTIONS[payment].label} after placing the order.`}
+          </p>
         </div>
         <Link href="/cart" className="block text-center text-sm font-semibold text-blue-700 hover:text-blue-800">
           ← Back to cart
@@ -315,6 +350,54 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
     <div className={cn('flex justify-between', strong && 'border-t border-slate-200 pt-2 text-base font-bold text-slate-950')}>
       <span className={strong ? undefined : 'text-slate-600'}>{label}</span>
       <span className={strong ? undefined : 'font-semibold text-slate-800'}>{value}</span>
+    </div>
+  );
+}
+
+function PayNow({ method, orderNumber, totalPkr }: { method: 'jazzcash' | 'bank'; orderNumber: string; totalPkr: number }) {
+  const { account, label } = PAYMENT_OPTIONS[method];
+  const [copied, setCopied] = useState(false);
+  const copy = () =>
+    navigator.clipboard.writeText(account.number).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  const message =
+    `Assalam o Alaikum, I placed order ${orderNumber} on Battery HUB and paid ${formatRupees(totalPkr)} ` +
+    `by ${label}. Sending the payment screenshot.`;
+
+  return (
+    <div className="mt-4 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4 text-left text-sm">
+      <p className="font-bold text-slate-950">
+        Send {formatRupees(totalPkr)} to:
+      </p>
+      <div className="mt-2 flex items-center justify-between rounded-lg bg-white px-3 py-2">
+        <div>
+          <p className="text-xs text-slate-500">
+            {account.bank} · {account.title}
+          </p>
+          <p className="text-base font-bold tracking-wide text-slate-950">{account.number}</p>
+        </div>
+        <button
+          type="button"
+          onClick={copy}
+          className="flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-blue-100 hover:text-blue-700"
+        >
+          {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-600">
+        Then send the screenshot on WhatsApp with order number <strong>{orderNumber}</strong>. We dispatch once the payment is received.
+      </p>
+      <a
+        href={createWhatsAppLink(message)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700"
+      >
+        <MessageCircle className="h-4 w-4" /> Send payment screenshot on WhatsApp
+      </a>
     </div>
   );
 }

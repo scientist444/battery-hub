@@ -189,6 +189,8 @@ app.http('adminOrderStatus', {
       });
     }
     order.status = status;
+    // Confirming an advance-payment order means the payment was checked in the account.
+    if (status === 'confirmed' && order.paymentMethod !== 'cod') order.paymentStatus = 'paid';
     order.holdReason = status === 'on_hold' ? note ?? order.holdReason : undefined;
     order.history.push({ status, note, by: 'admin', at: new Date().toISOString() });
     const saved = await saveOrder(order, found.etag);

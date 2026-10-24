@@ -11,18 +11,18 @@ export function deliveryCopy(nationwide: boolean) {
     ? {
         serviceArea: 'All over Pakistan',
         trackOrders: true,
-        topBar: 'Delivery all over Pakistan · Cash on delivery · Order online',
+        topBar: 'Delivery all over Pakistan · Cash on delivery, JazzCash or bank transfer',
         delivery: 'Courier delivery all over Pakistan',
         deliveryShort: 'Nationwide delivery',
         deliveryDetail: 'Courier to your door, anywhere in Pakistan',
-        payment: 'Cash on delivery',
-        paymentPerk: 'Cash on delivery, no advance payment',
+        payment: 'Cash on delivery, JazzCash or bank',
+        paymentPerk: 'Cash on delivery, or pay by JazzCash or bank transfer',
         orderMethod: 'Order online at checkout, or ask us on WhatsApp.',
-        footerNote: 'Online ordering with cash on delivery across Pakistan.',
+        footerNote: 'Online ordering across Pakistan: cash on delivery, JazzCash or bank transfer.',
         heroKicker: 'Delivered all over Pakistan',
         collectionNote: 'Delivered all over Pakistan.',
-        about: 'We deliver all over Pakistan by courier, with cash on delivery.',
-        heroDelivery: 'Order online, pay cash on delivery.',
+        about: 'We deliver all over Pakistan by courier. Pay cash on delivery, or in advance by JazzCash or bank transfer.',
+        heroDelivery: 'Order online, pay cash on delivery or in advance.',
       }
     : {
         serviceArea: SERVICE_AREA,
@@ -44,6 +44,23 @@ export function deliveryCopy(nationwide: boolean) {
 
 export type DeliveryCopy = ReturnType<typeof deliveryCopy>;
 export const OWNER = 'Muhammad Umer Sajid';
+
+/** Accounts shown at checkout for paying in advance. Shown to every customer who picks that option. */
+export const PAYMENT_OPTIONS = {
+  cod: { label: 'Cash on Delivery', hint: 'Pay the courier in cash when your parcel arrives.' },
+  jazzcash: {
+    label: 'JazzCash',
+    hint: 'Pay now to our JazzCash account.',
+    account: { title: 'Muhammad Umer Sajid', number: '03203540318', bank: 'JazzCash' },
+  },
+  bank: {
+    label: 'Bank transfer (HBL)',
+    hint: 'Pay now by bank transfer to our HBL account.',
+    account: { title: 'Muhammad Umer', number: '1306790010003', bank: 'HBL' },
+  },
+} as const;
+
+export type PaymentMethod = keyof typeof PAYMENT_OPTIONS;
 
 export const STORE_CATEGORIES = [
   {

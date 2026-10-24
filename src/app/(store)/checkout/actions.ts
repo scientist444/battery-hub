@@ -1,6 +1,7 @@
 'use server';
 
 import { BackendError, apiProductId, backendFetch } from '@/lib/backend';
+import type { PaymentMethod } from '@/config/store';
 
 export interface CheckoutCity {
   id: string;
@@ -91,6 +92,7 @@ export async function placeOrder(input: {
   customer: CustomerInput;
   notes?: string;
   service?: string;
+  paymentMethod: PaymentMethod;
   expectedTotalPkr: number;
 }): Promise<ActionResult<PlacedOrder>> {
   try {
@@ -108,6 +110,8 @@ export async function placeOrder(input: {
 export interface TrackedOrder {
   orderNumber: string;
   status: string;
+  paymentMethod: string;
+  paymentStatus: string;
   placedAt: string;
   totalPkr: number;
   items: { name: string; qty: number }[];
