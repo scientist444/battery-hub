@@ -4,8 +4,7 @@ on:
   pull_request:
     paths: ['backend/**', '.github/workflows/backend.yml']
   push:
-    # feature/azure-backend: temporary, for the first deploy before merge.
-    branches: [master, feature/azure-backend]
+    branches: [master]
     paths: ['backend/**', '.github/workflows/backend.yml']
   workflow_dispatch:
 
