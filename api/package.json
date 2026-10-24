@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "test": "tsc && node --test \"dist/test/**/*.test.js\"",
+    "test": "tsc && node --test dist/test/*.test.js",
     "start": "func start",
     "seed": "tsc && node dist/scripts/build-seed.js"
   },
