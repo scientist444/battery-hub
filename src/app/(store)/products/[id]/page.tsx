@@ -4,7 +4,13 @@ import { notFound } from 'next/navigation';
 import { MapPin, ShieldAlert, Truck, Wallet } from 'lucide-react';
 import { categoryLabels } from '@/data/products';
 import { type DeliveryCopy, deliveryCopy, getStoreCategory } from '@/config/store';
-import { isCheckoutEnabled } from '@/lib/backend';
+import { apiProductId, isCheckoutEnabled } from '@/lib/backend';
+import { parsePrice } from '@/lib/format';
+import { isInStock } from '@/lib/stock';
+import { getProductReviews } from '@/lib/reviews';
+import { isGoogleSignInEnabled } from '@/lib/customer-session';
+import { Stars } from '@/components/reviews/Stars';
+import { ProductReviews } from '@/components/reviews/ProductReviews';
 import { getCatalog, getProduct } from '@/lib/catalog';
 import { StockBadge } from '@/components/ui/StockBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
@@ -38,9 +44,33 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   const related = (await getCatalog())
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
+  const checkout = isCheckoutEnabled();
+  const { summary, reviews } = await getProductReviews(apiProductId(product.id));
+
+  // Product data for search engines; the star rating can show in Google results once there are reviews.
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    sku: product.id,
+    image: (product.images.length ? product.images : [product.image]).map((src) => `https://batteryhub.com.pk${encodeURI(src)}`),
+    description: product.description,
+    brand: { '@type': 'Brand', name: 'Battery HUB' },
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'PKR',
+      price: parsePrice(product.price),
+      availability: isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: `https://batteryhub.com.pk/products/${product.slug}`,
+    },
+    ...(summary.count > 0 && {
+      aggregateRating: { '@type': 'AggregateRating', ratingValue: summary.average, reviewCount: summary.count },
+    }),
+  };
 
   return (
     <div className="bg-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
       <div className="container-custom py-6 lg:py-10">
         <nav className="mb-6 text-xs text-slate-500">
           <Link href="/" className="hover:text-slate-950">Home</Link>
@@ -61,19 +91,26 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{categoryLabels[product.category]}</p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{product.name}</h1>
             <p className="mt-1 text-xs text-slate-400">SKU: {product.id}</p>
+            {summary.count > 0 && (
+              <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-950">
+                <Stars rating={summary.average} /> {summary.average.toFixed(1)} · {summary.count} review{summary.count === 1 ? '' : 's'}
+              </a>
+            )}
 
             <div className="mt-5 flex items-center gap-3">
               <p className="text-2xl font-bold text-slate-950">{product.price}</p>
               <StockBadge product={product} />
             </div>
-            <p className="mt-1 text-xs text-slate-500">Delivery charges calculated on WhatsApp.</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {checkout ? 'Delivery charge is shown at checkout once you pick your city.' : 'Delivery charges calculated on WhatsApp.'}
+            </p>
 
             <div className="mt-6 border-t border-slate-200 pt-6">
               <ProductPurchase product={product} />
             </div>
 
             <ul className="mt-6 space-y-3 rounded-lg bg-slate-50 p-4">
-              {perkList(deliveryCopy(isCheckoutEnabled())).map(({ icon: Icon, text }) => (
+              {perkList(deliveryCopy(checkout)).map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-3 text-sm text-slate-700">
                   <Icon className="h-4 w-4 shrink-0 text-slate-950" />
                   {text}
@@ -107,6 +144,15 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             </div>
           </div>
         </div>
+
+        {checkout && (
+          <ProductReviews
+            productId={product.id}
+            summary={summary}
+            reviews={reviews}
+            signInHref={isGoogleSignInEnabled() ? `/auth/google?next=${encodeURIComponent(`/products/${product.slug}`)}` : undefined}
+          />
+        )}
 
         {related.length > 0 && (
           <section className="mt-16 border-t border-slate-200 pt-12">

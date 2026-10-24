@@ -21,6 +21,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
             {isBackendAdminEnabled() && (
               <>
                 <Link href="/admin/orders" className="text-slate-600 hover:text-slate-950">Orders</Link>
+                <Link href="/admin/reviews" className="text-slate-600 hover:text-slate-950">Reviews</Link>
                 <Link href="/admin/supplier" className="text-slate-600 hover:text-slate-950">Supplier</Link>
               </>
             )}

@@ -247,3 +247,27 @@ export interface CachedRate {
   feePkr: number;
   fetchedAt: string;
 }
+
+export type ReviewStatus = 'pending' | 'approved' | 'hidden';
+
+/**
+ * Product review by a signed-in customer who received the product. Stored in the customers container
+ * with partition value `review:<productId>`, so one product's reviews are a single-partition read.
+ */
+export interface Review {
+  id: string;
+  phone: string;
+  type: 'review';
+  productId: string;
+  productName: string;
+  accountId: string;
+  orderNumber: string;
+  /** Shown publicly, e.g. "Ali K.". */
+  name: string;
+  rating: number;
+  title?: string;
+  body: string;
+  status: ReviewStatus;
+  createdAt: string;
+  updatedAt: string;
+}

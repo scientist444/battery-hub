@@ -133,3 +133,17 @@ export const catalogSyncSchema = z.object({
     )
     .max(2000),
 });
+
+export const reviewSchema = z.object({
+  accountId,
+  productId: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1).max(40),
+  rating: z.number().int().min(1, 'Choose a star rating.').max(5),
+  title: z.string().trim().max(80).optional(),
+  body: z.string().trim().min(10, 'Write at least a sentence about the product.').max(1000),
+});
+
+export const reviewStatusSchema = z.object({
+  productId: z.string().min(1).max(120),
+  status: z.enum(['approved', 'hidden']),
+});

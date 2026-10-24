@@ -41,7 +41,7 @@ export function apiProductId(id: string) {
 export async function backendFetch<T>(
   access: Access,
   path: string,
-  init: { method?: string; body?: unknown; query?: Record<string, string> } = {},
+  init: { method?: string; body?: unknown; query?: Record<string, string>; timeoutMs?: number } = {},
 ): Promise<T> {
   const cfg = config(access);
   if (!cfg) throw new BackendError(503, 'Online ordering is not set up yet.');
@@ -54,7 +54,7 @@ export async function backendFetch<T>(
       headers: { 'x-api-key': cfg.key, ...(init.body === undefined ? {} : { 'content-type': 'application/json' }) },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
       cache: 'no-store',
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(init.timeoutMs ?? 20_000),
     });
   } catch (error) {
     console.error(`Backend ${path} unreachable`, error);

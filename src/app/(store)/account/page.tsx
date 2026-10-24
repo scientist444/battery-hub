@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AlertCircle, LogOut, MessageCircle, PackageSearch, UserRound } from 'lucide-react';
 import { createWhatsAppLink } from '@/config/store';
-import { isCheckoutEnabled } from '@/lib/backend';
+import { apiProductId, isCheckoutEnabled } from '@/lib/backend';
+import { getCatalog } from '@/lib/catalog';
 import { isGoogleSignInEnabled } from '@/lib/customer-session';
 import { type CustomerAccount, getAccount, getCustomerSession, getOrderHistory } from '@/lib/customer';
 import { getCheckoutCities } from '@/app/(store)/checkout/actions';
@@ -95,7 +96,8 @@ export default async function AccountPage({ searchParams }: { searchParams: { er
     console.error('Account load failed', error);
     loadError = 'We could not load your account right now. Please refresh in a minute.';
   }
-  const cities = await getCheckoutCities();
+  const [cities, catalog] = await Promise.all([getCheckoutCities(), getCatalog()]);
+  const productLinks = Object.fromEntries(catalog.map((p) => [apiProductId(p.id), `/products/${p.slug}`]));
 
   return (
     <Shell>
@@ -117,7 +119,7 @@ export default async function AccountPage({ searchParams }: { searchParams: { er
       <div className="grid gap-6 lg:grid-cols-[1fr,340px]">
         <section>
           <h2 className="mb-3 text-lg font-bold text-slate-950">Order history</h2>
-          <OrderHistory orders={orders} />
+          <OrderHistory orders={orders} productLinks={productLinks} />
         </section>
         <section>
           <h2 className="mb-3 text-lg font-bold text-slate-950">Account settings</h2>

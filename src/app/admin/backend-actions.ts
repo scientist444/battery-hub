@@ -1,6 +1,7 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { REVIEWS_TAG } from '@/lib/reviews';
 import { requireAdmin } from '@/lib/admin-session';
 import { BackendError, backendFetch } from '@/lib/backend';
 import { pushCatalog } from '@/lib/backend-catalog';
@@ -142,4 +143,39 @@ export async function addTrackingNumber(orderId: string, shipmentIndex: number, 
   }
   revalidatePath('/admin/orders');
   return { ok: true, message: 'Tracking number saved' };
+}
+
+// ---------- Reviews ----------
+
+export interface AdminReview {
+  id: string;
+  productId: string;
+  productName: string;
+  orderNumber: string;
+  name: string;
+  rating: number;
+  title?: string;
+  body: string;
+  status: 'pending' | 'approved' | 'hidden';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getReviews(status?: string): Promise<AdminReview[]> {
+  await requireAdmin();
+  const { reviews } = await backendFetch<{ reviews: AdminReview[] }>('admin', 'manage/reviews', { query: status ? { status } : {} });
+  return reviews;
+}
+
+export async function setReviewStatus(id: string, productId: string, status: 'approved' | 'hidden'): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    await backendFetch('admin', `manage/reviews/${encodeURIComponent(id)}/status`, { body: { productId, status } });
+  } catch (error) {
+    return failure(error);
+  }
+  // Show the change on product pages and the home page now, not after the five-minute cache.
+  revalidateTag(REVIEWS_TAG);
+  revalidatePath('/admin/reviews');
+  return { ok: true, message: status === 'approved' ? 'Published' : 'Hidden' };
 }

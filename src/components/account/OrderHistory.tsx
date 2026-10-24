@@ -5,7 +5,8 @@ import { formatRupees } from '@/lib/format';
 import { customerStatusLabel } from '@/lib/order-status';
 import { PAYMENT_OPTIONS, type PaymentMethod } from '@/config/store';
 
-export function OrderHistory({ orders }: { orders: TrackedOrder[] }) {
+/** `productLinks` maps API product IDs to product pages, for the review links on delivered orders. */
+export function OrderHistory({ orders, productLinks = {} }: { orders: TrackedOrder[]; productLinks?: Record<string, string> }) {
   if (orders.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
@@ -38,6 +39,22 @@ export function OrderHistory({ orders }: { orders: TrackedOrder[] }) {
               </div>
             </div>
             <p className="mt-2 text-sm text-slate-600">{order.items.map((i) => `${i.name} × ${i.qty}`).join(', ')}</p>
+            {order.status === 'delivered' && order.items.some((i) => i.productId && productLinks[i.productId]) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-slate-500">How was it?</span>
+                {order.items.map((item) =>
+                  item.productId && productLinks[item.productId] ? (
+                    <Link
+                      key={item.productId}
+                      href={`${productLinks[item.productId]}#reviews`}
+                      className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-semibold text-amber-900 hover:border-amber-500"
+                    >
+                      ★ Review {item.name}
+                    </Link>
+                  ) : null,
+                )}
+              </div>
+            )}
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
               <span className="text-slate-500">{tracking ? `${tracking.courier ?? 'Courier'} tracking: ${tracking.trackingNumber}` : ''}</span>
               <span className="flex gap-4">

@@ -9,6 +9,9 @@ import { HeroBanner } from '@/components/home/HeroBanner';
 import { ValueProps } from '@/components/home/ValueProps';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { PromoBanners } from '@/components/home/PromoBanners';
+import { CustomerReviews } from '@/components/reviews/CustomerReviews';
+import { getReviewsOverview } from '@/lib/reviews';
+import { apiProductId } from '@/lib/backend';
 
 export function generateMetadata(): Metadata {
   return {
@@ -21,7 +24,11 @@ const HERO_SLUGS = ['bt-li-bhw-2600', '12v-400w-power-supply', 'chg-tp4056-hw107
 const RAIL_CATEGORIES = ['batteries', 'power-supplies'] as const;
 
 export default async function HomePage() {
-  const catalog = await getCatalog();
+  const [catalog, reviews] = await Promise.all([getCatalog(), getReviewsOverview()]);
+  const productHref = (id: string) => {
+    const product = catalog.find((p) => apiProductId(p.id) === id);
+    return product ? `/products/${product.slug}#reviews` : undefined;
+  };
   const available = catalog.filter(isInStock);
 
   const spotlight = HERO_SLUGS.map((slug) => catalog.find((p) => p.slug === slug)).filter(
@@ -46,6 +53,8 @@ export default async function HomePage() {
           <ProductGrid products={bestSellers} />
         </section>
       )}
+
+      <CustomerReviews overview={reviews} productHref={productHref} />
 
       <section className="container-custom pb-12 lg:pb-16">
         <PromoBanners />

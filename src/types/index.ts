@@ -22,6 +22,8 @@ export interface Product {
   featured?: boolean;
   /** Units on hand, set from the admin panel. Undefined means not tracked. */
   stockQty?: number;
+  /** Approved customer reviews, when there are any. */
+  rating?: { average: number; count: number };
 }
 
 /** Admin-editable fields stored outside the generated catalog. */

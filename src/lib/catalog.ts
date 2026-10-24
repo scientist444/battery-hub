@@ -3,6 +3,8 @@ import { products as baseProducts } from '@/data/products';
 import { Product, ProductCategory, ProductOverride } from '@/types';
 import { applyOverride } from '@/lib/catalog-merge';
 import { getRedis } from '@/lib/redis';
+import { apiProductId } from '@/lib/backend';
+import { getReviewsOverview } from '@/lib/reviews';
 
 const OVERRIDES_KEY = 'bh:product-overrides';
 /** Products created from the admin panel, keyed by id. */
@@ -80,7 +82,11 @@ export function mergeCatalog({ overrides, customProducts, hiddenIds }: CatalogSt
  */
 export async function getCatalog() {
   noStore();
-  return mergeCatalog(await getCatalogState());
+  const [state, reviews] = await Promise.all([getCatalogState(), getReviewsOverview()]);
+  return mergeCatalog(state).map((product) => {
+    const rating = reviews.products[apiProductId(product.id)];
+    return rating?.count ? { ...product, rating } : product;
+  });
 }
 
 export async function getProduct(slugOrId: string) {

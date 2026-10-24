@@ -28,7 +28,7 @@ function customerView(order: Order) {
     paymentStatus: order.paymentStatus,
     placedAt: order.createdAt,
     totalPkr: order.totalPkr,
-    items: order.items.map((i) => ({ name: i.name, qty: i.qty })),
+    items: order.items.map((i) => ({ productId: i.productId, name: i.name, qty: i.qty })),
     shipments: order.shipments.map((s) => ({
       status: s.status,
       trackingNumber: s.trackingNumber,
