@@ -32,7 +32,7 @@ function customerView(order: Order) {
     shipments: order.shipments.map((s) => ({
       status: s.status,
       trackingNumber: s.trackingNumber,
-      courier: s.courier === 'trax' ? 'Trax' : undefined,
+      courier: s.courier === 'trax' ? 'Trax' : s.courier === 'rider' ? 'Bykea / InDrive rider' : undefined,
       events: s.events.map(({ message, at }) => ({ message, at })),
     })),
   };

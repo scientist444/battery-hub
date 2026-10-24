@@ -96,6 +96,12 @@ export interface FlatRateTable {
   perExtraKg: number;
 }
 
+export interface InstantDelivery {
+  enabled: boolean;
+  /** Offered only when both the pickup and the customer are in these cities. */
+  cityIds: string[];
+}
+
 export interface StoreSettings {
   id: 'store';
   /** Supplier used for products that have none assigned. */
@@ -110,6 +116,8 @@ export interface StoreSettings {
   /** Exclude services that travel by air for every parcel (Pakistan-to-Pakistan by road). */
   groundOnly: boolean;
   allowCustomerServiceChoice: boolean;
+  /** Same-day rider (Bykea / InDrive) for local orders; the customer pays the rider's fare directly. */
+  instantDelivery: InstantDelivery;
   flatRates: FlatRateTable;
   packagingG: number;
   defaultWeightG: number;
@@ -151,7 +159,8 @@ export interface Shipment {
   supplierId: string;
   pickup: SupplierLocation;
   itemIndexes: number[];
-  courier: 'trax' | 'manual';
+  /** 'rider': instant Bykea / InDrive delivery booked by the admin; fare paid by the customer to the rider. */
+  courier: 'trax' | 'manual' | 'rider';
   serviceCode: string;
   weightG: number;
   codAmountPkr: number;

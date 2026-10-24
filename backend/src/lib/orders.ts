@@ -116,7 +116,7 @@ export async function createOrder(
         supplierId: s.supplierId,
         pickup: s.pickup,
         itemIndexes: s.itemIndexes,
-        courier,
+        courier: s.chosen.code === 'instant' ? 'rider' : courier,
         serviceCode: s.chosen.code,
         weightG: s.weightG,
         // Each parcel collects its own products plus its own delivery charge.

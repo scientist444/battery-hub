@@ -5,6 +5,16 @@ export interface ServiceOption {
   name: string;
   feePkr: number;
   etaDays?: string;
+  /** The fee is not charged by us; the customer pays the rider's fare on delivery. */
+  fareOnDelivery?: boolean;
+}
+
+export const INSTANT: ServiceOption = { code: 'instant', name: 'Instant rider (Bykea / InDrive)', feePkr: 0, fareOnDelivery: true };
+
+/** Same-day rider when both the pickup and the customer are in the instant-delivery cities. */
+export function instantAvailable(settings: StoreSettings, originCityId: string, destinationCityId: string) {
+  const { enabled, cityIds } = settings.instantDelivery;
+  return enabled && cityIds.includes(originCityId) && cityIds.includes(destinationCityId);
 }
 
 /** Services that may carry this parcel: enabled, within weight limits, and never by air when ground-only or lithium. */

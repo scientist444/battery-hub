@@ -92,7 +92,7 @@ export interface AdminOrder {
   createdAt: string;
   customer: { name: string; phone: string; email?: string; cityName: string; address: string; landmark?: string };
   items: { name: string; qty: number; unitPricePkr: number }[];
-  shipments: { status: string; trackingNumber?: string; serviceCode: string; weightG: number; quotedFeePkr: number; lastError?: string }[];
+  shipments: { status: string; courier: string; trackingNumber?: string; serviceCode: string; weightG: number; quotedFeePkr: number; lastError?: string }[];
   subtotalPkr: number;
   deliveryFeePkr: number;
   totalPkr: number;
