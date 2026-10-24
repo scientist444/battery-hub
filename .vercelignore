@@ -1,0 +1,3 @@
+# The Azure backend and its infrastructure are deployed separately, not by Vercel.
+backend
+infra
