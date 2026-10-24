@@ -30,7 +30,9 @@ app.http('health', {
       return json({ ok: true, products: products.length, version: VERSION });
     } catch (error) {
       context.error('Health check failed', error);
-      return json({ ok: false }, 503);
+      // Error code only (no message or data), to tell configuration problems from outages.
+      const code = (error as { code?: string | number }).code ?? (error as Error).name;
+      return json({ ok: false, version: VERSION, error: String(code) }, 503);
     }
   },
 });
