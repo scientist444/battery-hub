@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { container, queryAll } from './cosmos';
 import { Category, Product, Supplier } from './types';
 
@@ -5,10 +7,25 @@ const CACHE_MS = 60 * 1000;
 let products: { value: Product[]; at: number } | undefined;
 let suppliers: { value: Supplier[]; at: number } | undefined;
 
+// Built at deploy time from the storefront catalog (scripts/build-seed.ts).
+const SEED_PATH = join(__dirname, '..', '..', 'seed.json');
+
+/** First run on an empty database: load the categories and products bundled with the deployment. */
+async function seedIfEmpty(): Promise<Product[]> {
+  if (!existsSync(SEED_PATH)) return [];
+  const seed = JSON.parse(readFileSync(SEED_PATH, 'utf8')) as { categories: Category[]; products: Omit<Product, 'updatedAt'>[] };
+  const now = new Date().toISOString();
+  for (const category of seed.categories) await container('categories').items.upsert(category);
+  const seeded = seed.products.map((p) => ({ ...p, updatedAt: now }));
+  for (const product of seeded) await container('products').items.upsert(product);
+  return seeded;
+}
+
 /** All products, cached in memory for a minute (a few dozen small documents). */
 export async function getProducts(): Promise<Product[]> {
   if (products && Date.now() - products.at < CACHE_MS) return products.value;
-  const value = await queryAll<Product>('products', 'SELECT * FROM c');
+  let value = await queryAll<Product>('products', 'SELECT * FROM c');
+  if (value.length === 0) value = await seedIfEmpty();
   products = { value, at: Date.now() };
   return value;
 }

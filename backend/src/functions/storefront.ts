@@ -8,6 +8,22 @@ import { orderSchema, pkMobile, quoteSchema } from '../lib/validation';
 
 const bookingQueue = output.storageQueue({ queueName: '%ORDERS_QUEUE%', connection: 'AzureWebJobsStorage' });
 
+// Public health check: confirms the API, database and catalog are reachable. No API key, no private data.
+app.http('health', {
+  methods: ['GET'],
+  route: 'health',
+  authLevel: 'anonymous',
+  handler: async (_request, context) => {
+    try {
+      const products = await getProducts();
+      return json({ ok: true, products: products.length });
+    } catch (error) {
+      context.error('Health check failed', error);
+      return json({ ok: false }, 503);
+    }
+  },
+});
+
 app.http('products', {
   methods: ['GET'],
   route: 'products',
