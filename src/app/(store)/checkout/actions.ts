@@ -121,7 +121,7 @@ export interface TrackedOrder {
   paymentStatus: string;
   placedAt: string;
   totalPkr: number;
-  items: { name: string; qty: number }[];
+  items: { productId?: string; name: string; qty: number }[];
   shipments: { status: string; trackingNumber?: string; courier?: string; events: { message: string; at: string }[] }[];
   invoiceUrl?: string;
 }

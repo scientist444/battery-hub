@@ -196,3 +196,9 @@ test('instant rider: offered only inside Rawalpindi/Islamabad, never the default
   const off = await buildQuote([{ productId: 'P1', qty: 1 }], 'rawalpindi', 'instant', ctx({ courierMode: 'flat', instantDelivery: { enabled: false, cityIds: ['rawalpindi'] } }, [product({})]));
   assert.equal(off.shipments[0].chosen.code, 'standard');
 });
+
+test('review summary: average to one decimal and star counts', async () => {
+  const { summarize } = await import('../src/lib/reviews');
+  assert.deepEqual(summarize([]), { average: 0, count: 0, stars: [0, 0, 0, 0, 0] });
+  assert.deepEqual(summarize([{ rating: 5 }, { rating: 4 }, { rating: 4 }]), { average: 4.3, count: 3, stars: [0, 0, 0, 2, 1] });
+});
