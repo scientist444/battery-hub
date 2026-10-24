@@ -170,3 +170,11 @@ test('mobile numbers are normalised', () => {
   assert.equal(pkMobile.parse('92-300-1234567'), '03001234567');
   assert.equal(pkMobile.safeParse('12345').success, false);
 });
+
+test('seed builds valid Cosmos IDs for all storefront products', () => {
+  const { readCatalog, toApiProduct } = require('../scripts/build-seed') as typeof import('../scripts/build-seed');
+  const products = readCatalog(require('path').join(__dirname, '..', '..', '..', 'src', 'data', 'products.ts')).map((p) => toApiProduct(p));
+  assert.equal(products.length, 30);
+  for (const p of products) assert.match(p.id, /^[A-Za-z0-9.-]+$/, p.id);
+  assert.equal(new Set(products.map((p) => p.id)).size, products.length);
+});

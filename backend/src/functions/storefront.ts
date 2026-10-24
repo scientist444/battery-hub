@@ -31,12 +31,9 @@ app.http('health', {
     } catch (error) {
       context.error('Health check failed', error);
       // Error code only (no message or data), to tell configuration problems from outages.
-      const e = (error ?? {}) as { code?: string | number; name?: string; message?: string; substatus?: number };
-      // TEMPORARY diagnostics while bringing up the first deploy; remove before merge.
-      return json(
-        { ok: false, version: VERSION, error: String(e.code ?? e.name), type: typeof error, keys: Object.keys(e).slice(0, 10), message: String(e.message ?? error).slice(0, 300) },
-        503,
-      );
+      // Error code only (no message or data), to tell configuration problems from outages.
+      const e = (error ?? {}) as { code?: string | number; name?: string };
+      return json({ ok: false, version: VERSION, error: String(e.code ?? e.name ?? 'unknown') }, 503);
     }
   },
 });

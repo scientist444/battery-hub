@@ -64,7 +64,7 @@ export const categorySchema = z.object({
 });
 
 export const productSchema = z.object({
-  id: z.string().regex(/^[A-Za-z0-9-]{2,60}$/),
+  id: z.string().regex(/^[A-Za-z0-9.-]{2,60}$/, 'Use letters, numbers, dots and dashes.'),
   categoryId: z.string().min(1),
   slug: z.string().regex(/^[a-z0-9-]{2,80}$/),
   name: z.string().trim().min(2).max(150),

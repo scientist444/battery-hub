@@ -53,10 +53,15 @@ export function readCatalog(path: string): SourceProduct[] {
   return JSON.parse(source.slice(start, end));
 }
 
+/** Cosmos DB IDs cannot contain / \\ ? or #. */
+export function safeId(id: string) {
+  return id.replace(/[/\\?#]/g, '-');
+}
+
 export function toApiProduct(p: SourceProduct, extras: Extras = {}) {
   const pricePkr = parseInt(p.price.replace(/[^0-9]/g, ''), 10);
   return {
-    id: p.id,
+    id: safeId(p.id),
     categoryId: p.category,
     slug: p.slug,
     name: p.name,
