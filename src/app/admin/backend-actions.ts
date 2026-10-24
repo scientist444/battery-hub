@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin-session';
 import { BackendError, backendFetch } from '@/lib/backend';
 import { pushCatalog } from '@/lib/backend-catalog';
+import { invoiceUrl } from '@/lib/invoice';
 import type { UpdateResult } from '@/app/admin/actions';
 
 function failure(error: unknown): UpdateResult {
@@ -92,13 +93,24 @@ export interface AdminOrder {
   createdAt: string;
   customer: { name: string; phone: string; email?: string; cityName: string; address: string; landmark?: string };
   items: { name: string; qty: number; unitPricePkr: number }[];
-  shipments: { status: string; courier: string; trackingNumber?: string; serviceCode: string; weightG: number; quotedFeePkr: number; lastError?: string }[];
+  shipments: {
+    status: string;
+    courier: string;
+    itemIndexes?: number[];
+    trackingNumber?: string;
+    serviceCode: string;
+    weightG: number;
+    codAmountPkr?: number;
+    quotedFeePkr: number;
+    lastError?: string;
+  }[];
   subtotalPkr: number;
   deliveryFeePkr: number;
   totalPkr: number;
   paymentMethod: string;
   paymentStatus: string;
   notes?: string;
+  invoiceUrl?: string;
 }
 
 export async function getOrders(status?: string, q?: string): Promise<AdminOrder[]> {
@@ -107,7 +119,7 @@ export async function getOrders(status?: string, q?: string): Promise<AdminOrder
   if (status) query.status = status;
   if (q) query.q = q;
   const { orders } = await backendFetch<{ orders: AdminOrder[] }>('admin', 'manage/orders', { query });
-  return orders;
+  return orders.map((order) => ({ ...order, invoiceUrl: invoiceUrl(order.number) }));
 }
 
 export async function setOrderStatus(orderId: string, status: string, note?: string): Promise<UpdateResult> {

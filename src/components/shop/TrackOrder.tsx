@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { AlertCircle, Loader2, Package, Search } from 'lucide-react';
+import { AlertCircle, Loader2, Package, Search, FileText } from 'lucide-react';
 import { type TrackedOrder, trackOrder } from '@/app/(store)/checkout/actions';
 import { formatRupees } from '@/lib/format';
 import { customerStatusLabel } from '@/lib/order-status';
@@ -92,6 +92,16 @@ export function TrackOrder({ initialOrder }: { initialOrder: string }) {
               )}
             </div>
           ))}
+          {order.invoiceUrl && (
+            <a
+              href={order.invoiceUrl}
+              target="_blank"
+              rel="noopener"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800"
+            >
+              <FileText className="h-4 w-4" /> Download invoice
+            </a>
+          )}
         </div>
       )}
     </div>
