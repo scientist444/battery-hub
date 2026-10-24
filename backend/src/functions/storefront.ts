@@ -7,7 +7,9 @@ import { getSecret } from '../lib/secrets';
 import { HttpError, json, parseBody, route } from '../lib/http';
 import { createOrder, findOrderByNumber } from '../lib/orders';
 import { buildQuote, publicQuote } from '../lib/quote';
-import { orderSchema, pkMobile, quoteSchema } from '../lib/validation';
+import { accountId, accountSchema, orderSchema, pkMobile, quoteSchema } from '../lib/validation';
+import { container, queryAll, readDoc } from '../lib/cosmos';
+import { Account, Order } from '../lib/types';
 
 // Commit SHA written at deploy time, so a health check can tell which build is serving.
 const VERSION = (() => {
@@ -17,6 +19,24 @@ const VERSION = (() => {
     return 'dev';
   }
 })();
+
+function customerView(order: Order) {
+  return {
+    orderNumber: order.number,
+    status: order.status,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    placedAt: order.createdAt,
+    totalPkr: order.totalPkr,
+    items: order.items.map((i) => ({ name: i.name, qty: i.qty })),
+    shipments: order.shipments.map((s) => ({
+      status: s.status,
+      trackingNumber: s.trackingNumber,
+      courier: s.courier === 'trax' ? 'Trax' : undefined,
+      events: s.events.map(({ message, at }) => ({ message, at })),
+    })),
+  };
+}
 
 const bookingQueue = output.storageQueue({ queueName: '%ORDERS_QUEUE%', connection: 'AzureWebJobsStorage' });
 
@@ -113,6 +133,7 @@ app.http('placeOrder', {
       body.notes,
       ctx.settings,
       body.paymentMethod,
+      body.accountId,
     );
 
     if (order.status === 'confirmed' && ctx.settings.courierMode === 'trax' && ctx.settings.autoBook) {
@@ -146,20 +167,54 @@ app.http('trackOrder', {
     if (!order || !phone.success || order.customer.phone !== phone.data) {
       throw new HttpError(404, 'No order matches that order number and phone number.');
     }
-    return json({
-      orderNumber: order.number,
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      paymentStatus: order.paymentStatus,
-      placedAt: order.createdAt,
-      totalPkr: order.totalPkr,
-      items: order.items.map((i) => ({ name: i.name, qty: i.qty })),
-      shipments: order.shipments.map((s) => ({
-        status: s.status,
-        trackingNumber: s.trackingNumber,
-        courier: s.courier === 'trax' ? 'Trax' : undefined,
-        events: s.events.map(({ message, at }) => ({ message, at })),
-      })),
-    });
+    return json(customerView(order));
+  }),
+});
+
+// ---------- Signed-in customers ----------
+// The website signs customers in with Google and passes the verified account ID; these routes trust it
+// because only the website's server holds the storefront key.
+
+app.http('customerAccount', {
+  methods: ['GET', 'PUT'],
+  route: 'customer/account',
+  authLevel: 'anonymous',
+  handler: route('storefront', async (request) => {
+    if (request.method === 'GET') {
+      const id = accountId.parse(request.query.get('accountId'));
+      // Account documents use their own ID as the partition key value.
+      const found = await readDoc<Account>('customers', id, id);
+      if (!found) throw new HttpError(404, 'No account yet.');
+      return json({ account: found.doc });
+    }
+    const body = await parseBody(request, accountSchema);
+    const existing = await readDoc<Account>('customers', body.accountId, body.accountId);
+    const now = new Date().toISOString();
+    const account: Account = {
+      id: body.accountId,
+      phone: body.accountId,
+      type: 'account',
+      email: body.email,
+      name: body.name,
+      mobile: body.mobile,
+      address: body.address,
+      createdAt: existing?.doc.createdAt ?? now,
+      updatedAt: now,
+    };
+    await container('customers').items.upsert(account);
+    return json({ account });
+  }),
+});
+
+app.http('customerOrders', {
+  methods: ['GET'],
+  route: 'customer/orders',
+  authLevel: 'anonymous',
+  handler: route('storefront', async (request) => {
+    const id = accountId.parse(request.query.get('accountId'));
+    const orders = await queryAll<Order>('orders', 'SELECT TOP 50 * FROM c WHERE c.accountId = @a ORDER BY c.createdAt DESC', [
+      { name: '@a', value: id },
+    ]);
+    return json({ orders: orders.map(customerView) });
   }),
 });

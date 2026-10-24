@@ -4,23 +4,9 @@ import { useState, useTransition } from 'react';
 import { AlertCircle, Loader2, Package, Search } from 'lucide-react';
 import { type TrackedOrder, trackOrder } from '@/app/(store)/checkout/actions';
 import { formatRupees } from '@/lib/format';
+import { customerStatusLabel } from '@/lib/order-status';
 import { Button } from '@/components/ui/Button';
 
-const STATUS_LABELS: Record<string, string> = {
-  on_hold: 'Waiting for confirmation',
-  confirmed: 'Confirmed',
-  booked: 'Booked with courier',
-  picked_up: 'Picked up by courier',
-  in_transit: 'On the way',
-  out_for_delivery: 'Out for delivery',
-  delivered: 'Delivered',
-  returning: 'Being returned',
-  returned: 'Returned',
-  cancelled: 'Cancelled',
-  partially_delivered: 'Partly delivered',
-};
-
-const label = (status: string) => STATUS_LABELS[status] ?? status.replace(/_/g, ' ');
 
 const inputClass =
   'h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100';
@@ -73,7 +59,7 @@ export function TrackOrder({ initialOrder }: { initialOrder: string }) {
             <div>
               <p className="text-xs text-slate-500">Order {order.orderNumber}</p>
               <p className="text-xl font-bold text-slate-950">
-                {order.paymentMethod !== 'cod' && order.paymentStatus !== 'paid' && order.status === 'on_hold' ? 'Waiting for payment' : label(order.status)}
+                {customerStatusLabel(order)}
               </p>
             </div>
             <p className="text-sm text-slate-600">

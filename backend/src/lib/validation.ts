@@ -7,6 +7,22 @@ export const pkMobile = z
   .transform((value) => value.replace(/^(\+92|0092|92)(?=3\d{9}$)/, '0'))
   .refine((value) => /^03\d{9}$/.test(value), 'Enter a valid mobile number, e.g. 0300 1234567.');
 
+export const accountId = z.string().regex(/^acct_[A-Za-z0-9_-]{6,80}$/);
+
+export const accountSchema = z.object({
+  accountId,
+  email: z.string().trim().email().max(120),
+  name: z.string().trim().min(2).max(80),
+  mobile: pkMobile.optional().or(z.literal('').transform(() => undefined)),
+  address: z
+    .object({
+      cityId: z.string().min(1),
+      address: z.string().trim().min(10, 'Please enter your full address.').max(300),
+      landmark: z.string().trim().max(120).optional(),
+    })
+    .optional(),
+});
+
 export const cartSchema = z
   .array(z.object({ productId: z.string().min(1), qty: z.number().int().min(1).max(50) }))
   .min(1)
@@ -31,6 +47,8 @@ export const orderSchema = z.object({
     landmark: z.string().trim().max(120).optional(),
   }),
   notes: z.string().trim().max(500).optional(),
+  /** Set by the website from its own verified sign-in session, never from the browser. */
+  accountId: accountId.optional(),
   /** The total the customer saw. If prices changed since, the order is refused with the new quote. */
   expectedTotalPkr: z.number().int().nonnegative(),
 });

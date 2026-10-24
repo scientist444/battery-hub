@@ -75,6 +75,7 @@ export async function createOrder(
   notes: string | undefined,
   settings: StoreSettings,
   paymentMethod: PaymentMethod = 'cod',
+  accountId?: string,
 ): Promise<Order> {
   const prepaid = paymentMethod !== 'cod';
   if (!prepaid && quote.totalPkr > settings.maxCodPkr) {
@@ -130,6 +131,7 @@ export async function createOrder(
       deliveryFeePkr: quote.deliveryFeePkr,
       totalPkr: quote.totalPkr,
       notes,
+      accountId,
       history: [{ status, note: reason, by: 'checkout', at: now }],
       createdAt: now,
       updatedAt: now,

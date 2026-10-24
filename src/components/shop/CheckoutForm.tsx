@@ -43,9 +43,20 @@ function Field({ label, optional, children }: { label: string; optional?: boolea
   );
 }
 
-export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; citiesError?: string }) {
+export function CheckoutForm({
+  cities,
+  citiesError,
+  profile,
+  signInEnabled,
+}: {
+  cities: CheckoutCity[];
+  citiesError?: string;
+  /** Saved details of the signed-in customer; undefined for guests. */
+  profile?: Omit<Details, 'notes'>;
+  signInEnabled?: boolean;
+}) {
   const { items, total: cartTotal, clearCart } = useCart();
-  const [details, setDetails] = useState<Details>(EMPTY);
+  const [details, setDetails] = useState<Details>(profile ? { ...profile, notes: '' } : EMPTY);
   const [quote, setQuote] = useState<CheckoutQuote>();
   const [quoteError, setQuoteError] = useState<string>();
   const [quoting, startQuote] = useTransition();
@@ -55,13 +66,16 @@ export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; 
   const [payment, setPayment] = useState<PaymentMethod>('cod');
   const quoteRequest = useRef(0);
 
-  // Remember the customer's details on this device for next time (not the notes).
+  // Guests: details remembered on this device from their last order (not the notes).
+  // Signed-in customers start from their saved account details instead.
+  const hasProfile = Boolean(profile);
   useEffect(() => {
+    if (hasProfile) return;
     try {
       const saved = localStorage.getItem(DETAILS_KEY);
       if (saved) setDetails((d) => ({ ...d, ...(JSON.parse(saved) as Partial<Details>), notes: '' }));
     } catch {}
-  }, []);
+  }, [hasProfile]);
 
   const lines = useMemo(() => items.map((i) => ({ productId: i.product.id, qty: i.quantity })), [items]);
   const cartKey = JSON.stringify(lines);
@@ -180,6 +194,20 @@ export function CheckoutForm({ cities, citiesError }: { cities: CheckoutCity[]; 
   return (
     <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[1fr,400px]">
       <div className="space-y-4">
+        {signInEnabled && (
+          <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-slate-700">
+            {profile ? (
+              <>Signed in as {profile.email}. This order will show in your account.</>
+            ) : (
+              <>
+                <a href="/auth/google?next=/checkout" className="font-semibold text-blue-700">
+                  Sign in with Google
+                </a>{' '}
+                to keep this order in your history and fill in your details next time. Or just continue as a guest.
+              </>
+            )}
+          </p>
+        )}
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-bold text-slate-950">1. Your details</h2>
           <div className="grid gap-4 sm:grid-cols-2">
