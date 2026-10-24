@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { BackendError, backendFetch } from '@/lib/backend';
 import { CUSTOMER_COOKIE, verifyCustomerToken } from '@/lib/customer-session';
 import type { TrackedOrder } from '@/app/(store)/checkout/actions';
+import { invoiceUrl } from '@/lib/invoice';
 
 export interface CustomerAccount {
   email: string;
@@ -27,5 +28,5 @@ export async function getAccount(accountId: string) {
 
 export async function getOrderHistory(accountId: string) {
   const { orders } = await backendFetch<{ orders: TrackedOrder[] }>('storefront', 'customer/orders', { query: { accountId } });
-  return orders;
+  return orders.map((order) => ({ ...order, invoiceUrl: invoiceUrl(order.orderNumber) }));
 }

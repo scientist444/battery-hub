@@ -172,6 +172,16 @@ export function CheckoutForm({
           >
             Track this order
           </Link>
+          {placed.invoiceUrl && (
+            <a
+              href={placed.invoiceUrl}
+              target="_blank"
+              rel="noopener"
+              className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-bold text-slate-800 hover:border-slate-950"
+            >
+              Download invoice
+            </a>
+          )}
           <Link href="/products" className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-bold text-slate-800 hover:border-slate-950">
             Continue shopping
           </Link>

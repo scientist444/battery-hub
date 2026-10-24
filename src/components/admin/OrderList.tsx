@@ -47,6 +47,16 @@ function OrderCard({ order }: { order: AdminOrder }) {
             </span>
           </p>
           <p className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleString('en-PK')}</p>
+          <p className="mt-1 flex gap-3 text-xs font-semibold">
+            <a href={`/admin/slip/${encodeURIComponent(order.number)}`} target="_blank" rel="noopener" className="text-blue-700 hover:underline">
+              Packing slip
+            </a>
+            {order.invoiceUrl && (
+              <a href={order.invoiceUrl} target="_blank" rel="noopener" className="text-blue-700 hover:underline">
+                Invoice
+              </a>
+            )}
+          </p>
           {order.holdReason && <p className="mt-1 text-xs text-amber-800">On hold: {order.holdReason}</p>}
         </div>
         <div className="text-right text-sm">

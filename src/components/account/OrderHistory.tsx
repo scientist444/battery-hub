@@ -40,9 +40,16 @@ export function OrderHistory({ orders }: { orders: TrackedOrder[] }) {
             <p className="mt-2 text-sm text-slate-600">{order.items.map((i) => `${i.name} × ${i.qty}`).join(', ')}</p>
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
               <span className="text-slate-500">{tracking ? `${tracking.courier ?? 'Courier'} tracking: ${tracking.trackingNumber}` : ''}</span>
-              <Link href={`/track?order=${encodeURIComponent(order.orderNumber)}`} className="font-semibold text-blue-700">
-                Track
-              </Link>
+              <span className="flex gap-4">
+                {order.invoiceUrl && (
+                  <a href={order.invoiceUrl} target="_blank" rel="noopener" className="font-semibold text-blue-700">
+                    Invoice
+                  </a>
+                )}
+                <Link href={`/track?order=${encodeURIComponent(order.orderNumber)}`} className="font-semibold text-blue-700">
+                  Track
+                </Link>
+              </span>
             </div>
           </div>
         );

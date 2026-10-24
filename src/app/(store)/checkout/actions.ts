@@ -3,6 +3,7 @@
 import { BackendError, apiProductId, backendFetch } from '@/lib/backend';
 import type { PaymentMethod } from '@/config/store';
 import { getCustomerSession } from '@/lib/customer';
+import { invoiceUrl } from '@/lib/invoice';
 
 export interface CheckoutCity {
   id: string;
@@ -88,6 +89,7 @@ export interface PlacedOrder {
   deliveryFeePkr: number;
   totalPkr: number;
   paymentMethod: string;
+  invoiceUrl?: string;
 }
 
 export async function placeOrder(input: {
@@ -104,7 +106,7 @@ export async function placeOrder(input: {
     const order = await backendFetch<PlacedOrder>('storefront', 'orders', {
       body: { ...input, items: toApiLines(input.items), notes: input.notes || undefined, accountId: session?.accountId },
     });
-    return { ok: true, data: order };
+    return { ok: true, data: { ...order, invoiceUrl: invoiceUrl(order.orderNumber) } };
   } catch (error) {
     // 409 with a quote: prices or delivery changed since the customer looked. Show the new total.
     const quote = error instanceof BackendError && error.status === 409 ? (error.details as CheckoutQuote | undefined) : undefined;
@@ -121,12 +123,13 @@ export interface TrackedOrder {
   totalPkr: number;
   items: { name: string; qty: number }[];
   shipments: { status: string; trackingNumber?: string; courier?: string; events: { message: string; at: string }[] }[];
+  invoiceUrl?: string;
 }
 
 export async function trackOrder(orderNumber: string, phone: string): Promise<ActionResult<TrackedOrder>> {
   try {
     const order = await backendFetch<TrackedOrder>('storefront', 'track', { query: { order: orderNumber, phone } });
-    return { ok: true, data: order };
+    return { ok: true, data: { ...order, invoiceUrl: invoiceUrl(order.orderNumber) } };
   } catch (error) {
     return { ok: false, error: message(error) };
   }
