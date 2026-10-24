@@ -298,6 +298,7 @@ const settingsPatch = z
     tieBreakPkr: z.number().int().min(0),
     groundOnly: z.boolean(),
     allowCustomerServiceChoice: z.boolean(),
+    instantDelivery: z.object({ enabled: z.boolean(), cityIds: z.array(z.string()) }),
     flatRates: z.object({ sameCity: z.number().int(), sameProvince: z.number().int(), otherProvince: z.number().int(), perExtraKg: z.number().int() }),
     packagingG: z.number().int().min(0),
     defaultWeightG: z.number().int().positive(),

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { AlertCircle, Banknote, Building2, CheckCircle2, Copy, Loader2, MessageCircle, PackageCheck, ShoppingCart, Smartphone, Truck } from 'lucide-react';
+import { AlertCircle, Banknote, Bike, Building2, CheckCircle2, Copy, Loader2, MessageCircle, PackageCheck, ShoppingCart, Smartphone, Truck } from 'lucide-react';
 import { useCart, formatRupees, parsePrice } from '@/context/CartContext';
 import {
   type CheckoutCity,
@@ -64,6 +64,9 @@ export function CheckoutForm({
   const [orderError, setOrderError] = useState<string>();
   const [placed, setPlaced] = useState<PlacedOrder>();
   const [payment, setPayment] = useState<PaymentMethod>('cod');
+  // Delivery method the customer picked; undefined means the server's default courier.
+  const [service, setService] = useState<string>();
+  const [riderOrder, setRiderOrder] = useState(false);
   const quoteRequest = useRef(0);
 
   // Guests: details remembered on this device from their last order (not the notes).
@@ -89,7 +92,7 @@ export function CheckoutForm({
     const request = ++quoteRequest.current;
     setQuoteError(undefined);
     startQuote(async () => {
-      const result = await getDeliveryQuote(lines, details.cityId);
+      const result = await getDeliveryQuote(lines, details.cityId, service);
       if (request !== quoteRequest.current) return;
       if (result.ok) setQuote(result.data);
       else {
@@ -98,7 +101,7 @@ export function CheckoutForm({
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [details.cityId, cartKey]);
+  }, [details.cityId, cartKey, service]);
 
   const set = (key: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setDetails((d) => ({ ...d, [key]: e.target.value }));
@@ -114,12 +117,14 @@ export function CheckoutForm({
         customer: { ...customer, email: customer.email || undefined, landmark: customer.landmark || undefined },
         notes,
         paymentMethod: payment,
+        service: quote.shipments[0]?.chosen.code,
         expectedTotalPkr: quote.totalPkr,
       });
       if (result.ok) {
         try {
           localStorage.setItem(DETAILS_KEY, JSON.stringify(customer));
         } catch {}
+        setRiderOrder(Boolean(quote.shipments[0]?.chosen.fareOnDelivery));
         setPlaced(result.data);
         clearCart();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -141,20 +146,23 @@ export function CheckoutForm({
         <p className="mt-1 text-3xl font-bold tracking-wide text-blue-700">{placed.orderNumber}</p>
         <div className="mt-6 space-y-2 rounded-xl bg-slate-50 p-4 text-left text-sm">
           <Row label="Products" value={formatRupees(placed.subtotalPkr)} />
-          <Row label="Delivery" value={formatRupees(placed.deliveryFeePkr)} />
+          <Row label="Delivery" value={riderOrder ? 'Pay the rider directly' : formatRupees(placed.deliveryFeePkr)} />
           <Row
             label={placed.paymentMethod === 'cod' ? 'Pay on delivery (cash)' : `Pay now (${PAYMENT_OPTIONS[placed.paymentMethod as PaymentMethod]?.label ?? 'advance'})`}
             value={formatRupees(placed.totalPkr)}
             strong
           />
         </div>
+        {riderOrder && <SendLocation orderNumber={placed.orderNumber} />}
         {placed.paymentMethod === 'jazzcash' || placed.paymentMethod === 'bank' ? (
           <PayNow method={placed.paymentMethod} orderNumber={placed.orderNumber} totalPkr={placed.totalPkr} />
         ) : (
           <p className="mt-4 text-sm text-slate-600">
             {placed.status === 'on_hold'
               ? 'We will call you on your number to confirm this order before we dispatch it.'
-              : 'We will send your parcel by courier and share the tracking number. Keep the cash amount ready on delivery.'}
+              : riderOrder
+                ? 'Keep the cash amount ready for the rider, plus the Bykea / InDrive fare.'
+                : 'We will send your parcel by courier and share the tracking number. Keep the cash amount ready on delivery.'}
           </p>
         )}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
@@ -243,7 +251,15 @@ export function CheckoutForm({
           )}
           <div className="grid gap-4">
             <Field label="City">
-              <select required value={details.cityId} onChange={set('cityId')} className={inputClass}>
+              <select
+                required
+                value={details.cityId}
+                onChange={(e) => {
+                  setService(undefined);
+                  set('cityId')(e);
+                }}
+                className={inputClass}
+              >
                 <option value="">Select your city</option>
                 {cities.map((city) => (
                   <option key={city.id} value={city.id}>
@@ -252,6 +268,45 @@ export function CheckoutForm({
                 ))}
               </select>
             </Field>
+            {shipment && shipment.options.length > 1 && (
+              <div role="radiogroup" aria-label="Delivery method" className="space-y-2">
+                <span className="block text-sm font-semibold text-slate-700">Delivery method</span>
+                {shipment.options.map((option) => {
+                  const selected = shipment.chosen.code === option.code;
+                  const Icon = option.fareOnDelivery ? Bike : Truck;
+                  return (
+                    <label
+                      key={option.code}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition',
+                        selected ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300',
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="service"
+                        value={option.code}
+                        checked={selected}
+                        onChange={() => setService(option.code)}
+                        className="sr-only"
+                      />
+                      <Icon className={cn('h-6 w-6 shrink-0', selected ? 'text-blue-700' : 'text-slate-400')} />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-slate-950">{option.name}</p>
+                        <p className="text-xs text-slate-600">
+                          {option.fareOnDelivery
+                            ? 'Same day. You share your location on WhatsApp and pay the rider’s fare directly.'
+                            : option.etaDays
+                              ? `${option.etaDays} days`
+                              : 'Courier delivery'}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-slate-800">{option.fareOnDelivery ? 'Rider fare' : formatRupees(option.feePkr)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
             <Field label="Full address">
               <textarea
                 required
@@ -327,11 +382,13 @@ export function CheckoutForm({
             <div className="flex justify-between">
               <span className="flex items-center gap-1.5 text-slate-600">
                 <Truck className="h-4 w-4 text-orange-500" />
-                Delivery{shipment ? ` (${shipment.chosen.name})` : ''}
+                Delivery{shipment ? ` (${shipment.chosen.fareOnDelivery ? 'instant rider' : shipment.chosen.name})` : ''}
               </span>
               <span className="font-semibold text-slate-800">
                 {quoting ? (
                   <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                ) : shipment?.chosen.fareOnDelivery ? (
+                  'Pay rider directly'
                 ) : quote ? (
                   formatRupees(quote.deliveryFeePkr)
                 ) : (
@@ -339,6 +396,9 @@ export function CheckoutForm({
                 )}
               </span>
             </div>
+            {shipment?.chosen.fareOnDelivery && (
+              <p className="text-xs text-slate-500">Same-day rider. The Bykea / InDrive fare is not included in this total.</p>
+            )}
             {shipment?.chosen.etaDays && <p className="text-xs text-slate-500">Usually delivered in {shipment.chosen.etaDays} days</p>}
             <div className="flex justify-between border-t border-slate-100 pt-3 text-base font-bold text-slate-950">
               <span>Total</span>
@@ -425,6 +485,27 @@ function PayNow({ method, orderNumber, totalPkr }: { method: 'jazzcash' | 'bank'
         className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700"
       >
         <MessageCircle className="h-4 w-4" /> Send payment screenshot on WhatsApp
+      </a>
+    </div>
+  );
+}
+
+function SendLocation({ orderNumber }: { orderNumber: string }) {
+  const message = `Assalam o Alaikum, this is my location for Battery HUB order ${orderNumber} (instant rider delivery):`;
+  return (
+    <div className="mt-4 rounded-xl border-2 border-blue-200 bg-blue-50 p-4 text-left text-sm">
+      <p className="font-bold text-slate-950">Instant rider delivery</p>
+      <p className="mt-1 text-xs leading-5 text-slate-600">
+        Send your live location on WhatsApp with order number <strong>{orderNumber}</strong>. We book a Bykea / InDrive rider to
+        you, and you pay the rider&apos;s fare directly.
+      </p>
+      <a
+        href={createWhatsAppLink(message)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700"
+      >
+        <MessageCircle className="h-4 w-4" /> Send my location on WhatsApp
       </a>
     </div>
   );

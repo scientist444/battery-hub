@@ -89,8 +89,14 @@ function OrderCard({ order }: { order: AdminOrder }) {
       {order.shipments.map((shipment, index) => (
         <div key={index} className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm">
           <span className="text-slate-600">
-            Parcel {order.shipments.length > 1 ? index + 1 : ''} · {(shipment.weightG / 1000).toFixed(2)} kg · {shipment.serviceCode} ·{' '}
-            {formatRupees(shipment.quotedFeePkr)}
+            Parcel {order.shipments.length > 1 ? index + 1 : ''} · {(shipment.weightG / 1000).toFixed(2)} kg ·{' '}
+            {shipment.courier === 'rider' ? (
+              <strong className="text-blue-800">Instant rider (Bykea / InDrive), customer pays fare, location on WhatsApp</strong>
+            ) : (
+              <>
+                {shipment.serviceCode} · {formatRupees(shipment.quotedFeePkr)}
+              </>
+            )}
           </span>
           {shipment.trackingNumber ? (
             <span className="font-semibold text-slate-900">Tracking {shipment.trackingNumber}</span>
@@ -100,7 +106,7 @@ function OrderCard({ order }: { order: AdminOrder }) {
                 <input
                   value={tracking[index] ?? ''}
                   onChange={(e) => setTracking((t) => ({ ...t, [index]: e.target.value }))}
-                  placeholder="Trax tracking no."
+                  placeholder={shipment.courier === 'rider' ? 'Rider / ride ID' : 'Trax tracking no.'}
                   className="h-9 w-40 rounded-md border border-slate-300 px-2 text-sm outline-none focus:border-slate-950"
                 />
                 <Button

@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   tieBreakPkr: 30,
   groundOnly: true,
   allowCustomerServiceChoice: true,
+  instantDelivery: { enabled: true, cityIds: ['rawalpindi', 'islamabad'] },
   flatRates: { sameCity: 200, sameProvince: 250, otherProvince: 300, perExtraKg: 100 },
   packagingG: 150,
   defaultWeightG: 500,

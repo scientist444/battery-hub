@@ -21,6 +21,8 @@ export interface DeliveryOption {
   name: string;
   etaDays?: string;
   feePkr: number;
+  /** Instant rider: the customer pays the rider's fare directly, so it is not in the total. */
+  fareOnDelivery?: boolean;
 }
 
 export interface CheckoutQuote {

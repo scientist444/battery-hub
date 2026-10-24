@@ -178,3 +178,21 @@ test('seed builds valid Cosmos IDs for all storefront products', () => {
   for (const p of products) assert.match(p.id, /^[A-Za-z0-9.-]+$/, p.id);
   assert.equal(new Set(products.map((p) => p.id)).size, products.length);
 });
+
+test('instant rider: offered only inside Rawalpindi/Islamabad, never the default, fare not charged', async () => {
+  const local = await buildQuote([{ productId: 'P1', qty: 1 }], 'islamabad', undefined, ctx({ courierMode: 'flat' }, [product({})]));
+  assert.deepEqual(local.shipments[0].options.map((o) => o.code), ['standard', 'instant']);
+  assert.equal(local.shipments[0].chosen.code, 'standard');
+
+  const rider = await buildQuote([{ productId: 'P1', qty: 1 }], 'islamabad', 'instant', ctx({ courierMode: 'flat', allowCustomerServiceChoice: false }, [product({})]));
+  assert.equal(rider.shipments[0].chosen.code, 'instant');
+  assert.equal(rider.deliveryFeePkr, 0);
+  assert.equal(rider.totalPkr, 250);
+
+  const far = await buildQuote([{ productId: 'P1', qty: 1 }], 'karachi', 'instant', ctx({ courierMode: 'flat' }, [product({})]));
+  assert.equal(far.shipments[0].chosen.code, 'standard');
+  assert.ok(!far.shipments[0].options.some((o) => o.code === 'instant'));
+
+  const off = await buildQuote([{ productId: 'P1', qty: 1 }], 'rawalpindi', 'instant', ctx({ courierMode: 'flat', instantDelivery: { enabled: false, cityIds: ['rawalpindi'] } }, [product({})]));
+  assert.equal(off.shipments[0].chosen.code, 'standard');
+});

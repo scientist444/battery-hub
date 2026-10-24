@@ -2,7 +2,7 @@ import { findCity } from './cities';
 import { HttpError } from './http';
 import { primarySupplierId } from './catalog';
 import { flatRate } from './shipping/flat';
-import { ServiceOption, allowedServices, chooseService, weightBand } from './shipping/select';
+import { INSTANT, ServiceOption, allowedServices, chooseService, instantAvailable, weightBand } from './shipping/select';
 import { City, CourierService, Product, StoreSettings, Supplier, SupplierLocation } from './types';
 
 export interface CartLine {
@@ -108,8 +108,14 @@ export async function buildQuote(lines: CartLine[], cityId: string, preferredSer
       }
     }
 
-    const requested = settings.allowCustomerServiceChoice && preferredService ? options.find((o) => o.code === preferredService) : undefined;
-    const chosen = requested ?? chooseService(settings, weightG, options)!;
+    // The courier stays the default; the instant rider is only used when the customer picks it.
+    const courierOptions = options;
+    if (instantAvailable(settings, origin.id, city.id)) options = [...options, INSTANT];
+    const requested =
+      preferredService && (settings.allowCustomerServiceChoice || preferredService === INSTANT.code)
+        ? options.find((o) => o.code === preferredService)
+        : undefined;
+    const chosen = requested ?? chooseService(settings, weightG, courierOptions)!;
     shipments.push({ supplierId, pickup, origin, itemIndexes, weightG, weightEstimated, containsLithium, subtotalPkr, options, chosen, feeEstimated });
   }
 
