@@ -2,6 +2,7 @@
 
 import { BackendError, apiProductId, backendFetch } from '@/lib/backend';
 import type { PaymentMethod } from '@/config/store';
+import { getCustomerSession } from '@/lib/customer';
 
 export interface CheckoutCity {
   id: string;
@@ -96,8 +97,10 @@ export async function placeOrder(input: {
   expectedTotalPkr: number;
 }): Promise<ActionResult<PlacedOrder>> {
   try {
+    // Link the order to the signed-in account (from the verified session cookie, never from the browser).
+    const session = await getCustomerSession();
     const order = await backendFetch<PlacedOrder>('storefront', 'orders', {
-      body: { ...input, items: toApiLines(input.items), notes: input.notes || undefined },
+      body: { ...input, items: toApiLines(input.items), notes: input.notes || undefined, accountId: session?.accountId },
     });
     return { ok: true, data: order };
   } catch (error) {

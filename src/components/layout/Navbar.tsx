@@ -4,7 +4,7 @@ import { FormEvent, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, MessageCircle, Search, ShoppingCart, X } from 'lucide-react';
+import { Menu, MessageCircle, Search, ShoppingCart, UserRound, X } from 'lucide-react';
 import { STORE_CATEGORIES, createWhatsAppLink } from '@/config/store';
 import { products } from '@/data/products';
 import { useCart } from '@/context/CartContext';
@@ -71,6 +71,13 @@ export default function Navbar({ topBar }: { topBar: string }) {
           </form>
 
           <div className="flex items-center justify-end gap-2">
+            <Link
+              href="/account"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-100"
+              aria-label="My account"
+            >
+              <UserRound className="h-5 w-5" />
+            </Link>
             <Link
               href="/cart"
               className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-100"

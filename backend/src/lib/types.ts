@@ -194,6 +194,8 @@ export interface Order {
   deliveryFeePkr: number;
   totalPkr: number;
   notes?: string;
+  /** Signed-in customer who placed the order, if any. */
+  accountId?: string;
   history: { status: OrderStatus; note?: string; by: string; at: string }[];
   createdAt: string;
   updatedAt: string;
@@ -208,6 +210,23 @@ export interface Customer {
   orderCount: number;
   refusedCount: number;
   lastOrderAt: string;
+}
+
+/**
+ * A signed-in customer (Google account). Stored in the customers container; its partition key
+ * value is the account ID (prefixed `acct_`), so it never collides with phone-keyed customer records.
+ */
+export interface Account {
+  id: string;
+  /** Partition key: same as id. */
+  phone: string;
+  type: 'account';
+  email: string;
+  name: string;
+  mobile?: string;
+  address?: { cityId: string; address: string; landmark?: string };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CachedRate {
