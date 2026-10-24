@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { app, output } from '@azure/functions';
 import { getCategories, getProducts, publicProduct } from '../lib/catalog';
 import { getCities, quoteContext } from '../lib/context';
@@ -5,6 +7,15 @@ import { HttpError, json, parseBody, route } from '../lib/http';
 import { createOrder, findOrderByNumber } from '../lib/orders';
 import { buildQuote, publicQuote } from '../lib/quote';
 import { orderSchema, pkMobile, quoteSchema } from '../lib/validation';
+
+// Commit SHA written at deploy time, so a health check can tell which build is serving.
+const VERSION = (() => {
+  try {
+    return (JSON.parse(readFileSync(join(__dirname, '..', '..', 'version.json'), 'utf8')) as { sha: string }).sha;
+  } catch {
+    return 'dev';
+  }
+})();
 
 const bookingQueue = output.storageQueue({ queueName: '%ORDERS_QUEUE%', connection: 'AzureWebJobsStorage' });
 
@@ -16,7 +27,7 @@ app.http('health', {
   handler: async (_request, context) => {
     try {
       const products = await getProducts();
-      return json({ ok: true, products: products.length });
+      return json({ ok: true, products: products.length, version: VERSION });
     } catch (error) {
       context.error('Health check failed', error);
       return json({ ok: false }, 503);

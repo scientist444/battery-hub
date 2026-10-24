@@ -53,6 +53,7 @@ jobs:
           npm ci
           npx tsc
           node dist/scripts/build-seed.js > dist/seed.json
+          echo "{\"sha\":\"${GITHUB_SHA}\"}" > dist/version.json
           npm prune --omit=dev
           rm -rf dist/test dist/scripts
       - uses: azure/login@v2
@@ -71,7 +72,11 @@ jobs:
           for i in $(seq 1 12); do
             body=$(curl -sS -m 60 -w ' HTTP %{http_code}' "$url" || true)
             echo "$body"
-            case "$body" in *'"ok":true'*) exit 0 ;; esac
+            # Pass only once the new build is serving and the full catalog is loaded.
+            case "$body" in *'"ok":true'*"\"version\":\"${GITHUB_SHA}\""*)
+              products=$(echo "$body" | sed -n 's/.*"products":\([0-9]*\).*/\1/p')
+              [ "${products:-0}" -ge 30 ] && exit 0 ;;
+            esac
             sleep 15
           done
           echo "::error::Health check did not pass: $url"
