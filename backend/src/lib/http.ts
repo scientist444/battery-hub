@@ -41,8 +41,9 @@ type Handler = (request: HttpRequest, context: InvocationContext, caller: Access
 /** Wraps a handler with API-key checks and consistent error responses. */
 export function route(access: Access, handler: Handler) {
   return async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    let caller: Access | undefined;
     try {
-      const caller = await authorize(request, access);
+      caller = await authorize(request, access);
       return await handler(request, context, caller);
     } catch (error) {
       if (error instanceof HttpError) {
@@ -52,7 +53,11 @@ export function route(access: Access, handler: Handler) {
         return json({ error: 'Invalid request.', details: error.flatten() }, 400);
       }
       context.error('Unhandled error', error);
-      return json({ error: 'Something went wrong. Please try again.' }, 500);
+      // The admin panel gets the cause so problems can be fixed; customers only see a code.
+      const e = (error ?? {}) as { code?: string | number; name?: string; message?: string };
+      const code = String(e.code ?? e.name ?? 'unknown');
+      const detail = caller === 'admin' ? `${code}: ${String(e.message ?? '').slice(0, 300)}` : code;
+      return json({ error: `Something went wrong (${detail}). Please try again.` }, 500);
     }
   };
 }
