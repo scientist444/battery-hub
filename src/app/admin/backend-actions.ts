@@ -179,3 +179,45 @@ export async function setReviewStatus(id: string, productId: string, status: 'ap
   revalidatePath('/admin/reviews');
   return { ok: true, message: status === 'approved' ? 'Published' : 'Hidden' };
 }
+
+// ---------- Customer requests (stock alerts, bulk quotes) ----------
+
+export interface AdminStockAlert {
+  id: string;
+  productId: string;
+  productName: string;
+  name?: string;
+  contactPhone: string;
+  createdAt: string;
+}
+
+export interface AdminQuoteRequest {
+  id: string;
+  name: string;
+  contactPhone: string;
+  organization?: string;
+  city: string;
+  details: string;
+  status: 'new' | 'done';
+  createdAt: string;
+}
+
+export async function getRequests(): Promise<{ alerts: AdminStockAlert[]; quotes: AdminQuoteRequest[] }> {
+  await requireAdmin();
+  return backendFetch('admin', 'manage/requests');
+}
+
+export async function setRequestStatus(
+  id: string,
+  body: { kind: 'alert'; productId: string; status: 'waiting' | 'notified' } | { kind: 'quote'; status: 'new' | 'done' },
+): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    await backendFetch('admin', `manage/requests/${encodeURIComponent(id)}/status`, { body });
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath('/admin/requests');
+  revalidatePath('/admin');
+  return { ok: true, message: 'Updated' };
+}

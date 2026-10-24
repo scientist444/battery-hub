@@ -6,6 +6,7 @@ import { addTrackingNumber, setOrderStatus, type AdminOrder } from '@/app/admin/
 import { formatRupees } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
+import { orderMessages } from '@/lib/customer-messages';
 
 const PAYMENT_LABELS: Record<string, string> = { cod: 'COD', jazzcash: 'JazzCash', bank: 'HBL', sadapay: 'SadaPay' };
 
@@ -133,6 +134,23 @@ function OrderCard({ order }: { order: AdminOrder }) {
           {shipment.lastError && <p className="w-full text-xs text-red-700">{shipment.lastError}</p>}
         </div>
       ))}
+
+      {orderMessages(order).length > 0 && order.status !== 'cancelled' && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-semibold text-slate-500">WhatsApp customer:</span>
+          {orderMessages(order).map((m) => (
+            <a
+              key={m.label}
+              href={m.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-800 hover:border-emerald-500"
+            >
+              {m.label}
+            </a>
+          ))}
+        </div>
+      )}
 
       {!closed && (
         <div className="mt-3 flex flex-wrap items-center gap-2">

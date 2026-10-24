@@ -1,5 +1,6 @@
 export const WHATSAPP_NUMBER = '923203540318';
 export const WHATSAPP_DISPLAY_NUMBER = '03203540318';
+export const SITE_URL = 'https://batteryhub.com.pk';
 export const SERVICE_AREA = 'Islamabad & Rawalpindi';
 
 /**

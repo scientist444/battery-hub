@@ -106,7 +106,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             </p>
 
             <div className="mt-6 border-t border-slate-200 pt-6">
-              <ProductPurchase product={product} />
+              <ProductPurchase product={product} notifyEnabled={checkout} />
             </div>
 
             <ul className="mt-6 space-y-3 rounded-lg bg-slate-50 p-4">
