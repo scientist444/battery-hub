@@ -11,7 +11,7 @@ import { getSettings, saveSettings } from '../lib/settings';
 import { trax } from '../lib/shipping/courier-registry';
 import { listTraxCities } from '../lib/shipping/trax';
 import { Order, Product, StoreSettings, Supplier } from '../lib/types';
-import { categorySchema, manualTrackingSchema, productSchema, statusChangeSchema, supplierSchema } from '../lib/validation';
+import { catalogSyncSchema, categorySchema, manualTrackingSchema, productSchema, statusChangeSchema, supplierSchema } from '../lib/validation';
 
 const bookingQueue = output.storageQueue({ queueName: '%ORDERS_QUEUE%', connection: 'AzureWebJobsStorage' });
 
@@ -48,6 +48,47 @@ app.http('adminProductStock', {
   }),
 });
 
+/**
+ * The website admin is where prices, stock and product text are edited. It pushes its whole catalog here:
+ * listed products are created or updated (keeping weight, box size, lithium flag and suppliers),
+ * and products missing from the list are switched off.
+ */
+app.http('adminCatalogSync', {
+  methods: ['POST'],
+  route: 'manage/catalog/sync',
+  authLevel: 'anonymous',
+  handler: route('admin', async (request) => {
+    const { products: incoming } = await parseBody(request, catalogSyncSchema);
+    const existing = new Map((await getProducts()).map((p) => [p.id, p]));
+    const now = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    let deactivated = 0;
+
+    for (const fields of incoming) {
+      const current = existing.get(fields.id);
+      existing.delete(fields.id);
+      const next: Product = current
+        ? { ...current, ...fields, active: true, updatedAt: now }
+        : { ...fields, containsLithium: fields.categoryId === 'batteries', suppliers: [], active: true, updatedAt: now };
+      if (current && JSON.stringify({ ...current, updatedAt: now }) === JSON.stringify(next)) continue;
+      if (current && current.categoryId !== next.categoryId) {
+        await container('products').item(current.id, current.categoryId).delete();
+      }
+      await container('products').items.upsert(next);
+      if (current) updated++;
+      else created++;
+    }
+    for (const leftover of existing.values()) {
+      if (!leftover.active) continue;
+      await container('products').items.upsert({ ...leftover, active: false, updatedAt: now });
+      deactivated++;
+    }
+    invalidateCatalog();
+    return json({ created, updated, deactivated, unchanged: incoming.length - created - updated });
+  }),
+});
+
 // ---------- Categories ----------
 
 app.http('adminCategories', {
@@ -76,6 +117,9 @@ app.http('adminSuppliers', {
     }
     const supplier: Supplier = { ...body, updatedAt: new Date().toISOString() };
     await saveSupplier(supplier);
+    // The first supplier becomes the default for products that have none assigned.
+    const settings = await getSettings();
+    if (!settings.defaultSupplierId) await saveSettings({ defaultSupplierId: supplier.id });
     return json({ supplier });
   }),
 });

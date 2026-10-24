@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ExternalLink, LogOut } from 'lucide-react';
 import { requireAdmin } from '@/lib/admin-session';
 import { logout } from '@/app/admin/actions';
+import { isBackendAdminEnabled } from '@/lib/backend';
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAdmin();
@@ -15,6 +16,15 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
             <Image src="/BH LOGO.png" alt="" width={32} height={32} className="h-8 w-8 rounded-md object-contain" />
             <span className="text-sm font-bold text-slate-950">Battery HUB Admin</span>
           </Link>
+          <nav className="flex items-center gap-4 text-sm font-medium">
+            <Link href="/admin" className="text-slate-600 hover:text-slate-950">Products</Link>
+            {isBackendAdminEnabled() && (
+              <>
+                <Link href="/admin/orders" className="text-slate-600 hover:text-slate-950">Orders</Link>
+                <Link href="/admin/supplier" className="text-slate-600 hover:text-slate-950">Supplier</Link>
+              </>
+            )}
+          </nav>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/" target="_blank" className="hidden items-center gap-1 text-slate-600 hover:text-slate-950 sm:flex">
               View store <ExternalLink className="h-3.5 w-3.5" />

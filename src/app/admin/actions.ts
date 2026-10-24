@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { ADMIN_COOKIE, SESSION_TTL_SECONDS, createSessionToken, isAdminConfigured } from '@/lib/auth';
 import { requireAdmin } from '@/lib/admin-session';
+import { syncCatalogQuietly } from '@/lib/backend-catalog';
 import { put, del } from '@vercel/blob';
 import {
   deleteCustomProduct,
@@ -99,8 +100,10 @@ async function productExists(id: string) {
   return customProducts.some((product) => product.id === id);
 }
 
-function refreshStorefront() {
+async function refreshStorefront() {
   revalidatePath('/', 'layout');
+  // Keep the ordering backend's prices and stock in step with the store.
+  await syncCatalogQuietly();
 }
 
 export async function updateProduct(formData: FormData): Promise<UpdateResult> {
@@ -128,7 +131,7 @@ export async function updateProduct(formData: FormData): Promise<UpdateResult> {
     return { ok: false, message: error instanceof Error ? error.message : 'Save failed.' };
   }
 
-  refreshStorefront();
+  await refreshStorefront();
   return { ok: true, message: 'Saved' };
 }
 
@@ -139,7 +142,7 @@ export async function resetProduct(id: string): Promise<UpdateResult> {
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Reset failed.' };
   }
-  refreshStorefront();
+  await refreshStorefront();
   return { ok: true, message: 'Reset to catalog defaults' };
 }
 
@@ -260,7 +263,7 @@ export async function createProduct(_prev: ProductFormState, formData: FormData)
     return { error: error instanceof Error ? error.message : 'Could not save the product.' };
   }
 
-  refreshStorefront();
+  await refreshStorefront();
   redirect('/admin');
 }
 
@@ -283,7 +286,7 @@ export async function removeProduct(id: string): Promise<UpdateResult> {
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Remove failed.' };
   }
-  refreshStorefront();
+  await refreshStorefront();
   return { ok: true, message: 'Removed' };
 }
 
@@ -295,6 +298,6 @@ export async function restoreProduct(id: string): Promise<UpdateResult> {
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Restore failed.' };
   }
-  refreshStorefront();
+  await refreshStorefront();
   return { ok: true, message: 'Restored' };
 }

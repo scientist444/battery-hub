@@ -21,7 +21,7 @@ const navLinks = [
   { label: 'Contact', href: '/contact' },
 ];
 
-export default function Navbar() {
+export default function Navbar({ topBar }: { topBar: string }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
@@ -38,7 +38,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white shadow-sm">
       <div className="bg-slate-950 text-white">
         <div className="container-custom py-2 text-center text-xs font-semibold text-slate-200">
-          Serving Islamabad &amp; Rawalpindi · Delivery via Bykea · Orders via WhatsApp
+          {topBar}
         </div>
       </div>
 

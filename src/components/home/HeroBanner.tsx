@@ -2,22 +2,23 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Product } from '@/types';
+import type { DeliveryCopy } from '@/config/store';
 import { ButtonLink } from '@/components/ui/Button';
 
 /** Full-width storefront banner showcasing up to three products. */
-export function HeroBanner({ spotlight }: { spotlight: Product[] }) {
+export function HeroBanner({ spotlight, copy }: { spotlight: Product[]; copy: DeliveryCopy }) {
   const [main, ...side] = spotlight;
 
   return (
     <section className="bg-slate-950 text-white">
       <div className="container-custom grid items-center gap-10 py-12 lg:grid-cols-[1fr,1.1fr] lg:py-16">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">Islamabad &amp; Rawalpindi</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">{copy.heroKicker}</p>
           <h1 className="mt-4 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
             Power for every project.
           </h1>
           <p className="mt-5 max-w-md text-base leading-7 text-slate-300">
-            Li-ion &amp; LiPo cells, SMPS power supplies, chargers, adapters and BMS boards. Order online, delivered by Bykea.
+            Li-ion &amp; LiPo cells, SMPS power supplies, chargers, adapters and BMS boards. {copy.heroDelivery}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href="/products" size="lg" className="bg-white text-slate-950 hover:bg-slate-200">

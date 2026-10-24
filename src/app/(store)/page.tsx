@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { getCatalog } from '@/lib/catalog';
 import { isInStock } from '@/lib/stock';
-import { STORE_CATEGORIES } from '@/config/store';
+import { STORE_CATEGORIES, deliveryCopy } from '@/config/store';
+import { isCheckoutEnabled } from '@/lib/backend';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { ProductGrid, ProductRail } from '@/components/shop/ProductGrid';
 import { HeroBanner } from '@/components/home/HeroBanner';
@@ -9,11 +10,12 @@ import { ValueProps } from '@/components/home/ValueProps';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { PromoBanners } from '@/components/home/PromoBanners';
 
-export const metadata: Metadata = {
-  title: 'Battery HUB - Batteries, Chargers, Power Supplies & Adapters',
-  description:
-    'Shop batteries, chargers, adapters, power supplies and BMS boards online. Delivery across Islamabad and Rawalpindi.',
-};
+export function generateMetadata(): Metadata {
+  return {
+    title: 'Battery HUB - Batteries, Chargers, Power Supplies & Adapters',
+    description: `Shop batteries, chargers, adapters, power supplies and BMS boards online. ${deliveryCopy(isCheckoutEnabled()).collectionNote}`,
+  };
+}
 
 const HERO_SLUGS = ['bt-li-bhw-2600', '12v-400w-power-supply', 'chg-tp4056-hw107'];
 const RAIL_CATEGORIES = ['batteries', 'power-supplies'] as const;
@@ -25,12 +27,13 @@ export default async function HomePage() {
   const spotlight = HERO_SLUGS.map((slug) => catalog.find((p) => p.slug === slug)).filter(
     (p): p is NonNullable<typeof p> => Boolean(p),
   );
+  const copy = deliveryCopy(isCheckoutEnabled());
   const bestSellers = available.filter((p) => p.featured).slice(0, 8);
 
   return (
     <>
-      <HeroBanner spotlight={spotlight.length ? spotlight : available.slice(0, 3)} />
-      <ValueProps />
+      <HeroBanner spotlight={spotlight.length ? spotlight : available.slice(0, 3)} copy={copy} />
+      <ValueProps copy={copy} />
 
       <section className="container-custom py-12 lg:py-16">
         <SectionHeading title="Shop by category" href="/products" linkLabel="All products" />

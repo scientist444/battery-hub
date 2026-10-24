@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { MessageCircle } from 'lucide-react';
-import { OWNER, createWhatsAppLink } from '@/config/store';
+import { OWNER, createWhatsAppLink, deliveryCopy } from '@/config/store';
+import { isCheckoutEnabled } from '@/lib/backend';
 
 export default function AboutPage() {
   return (
@@ -14,8 +15,7 @@ export default function AboutPage() {
           <p className="mt-4 text-sm leading-7 text-slate-600">
             Battery HUB helps students, robotics project builders, IoT developers, electronics
             hobbyists, and small project makers choose suitable batteries, chargers, adapters, and
-            power supplies. We are currently operating only in Islamabad and Rawalpindi, with orders
-            confirmed through WhatsApp.
+            power supplies. {deliveryCopy(isCheckoutEnabled()).about}
           </p>
           <div className="mt-5 rounded-lg bg-slate-50 p-4">
             <p className="text-sm font-black text-slate-950">Owner</p>
