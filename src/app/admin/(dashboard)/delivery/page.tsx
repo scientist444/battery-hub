@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin-session';
 import { isBackendAdminEnabled } from '@/lib/backend';
 import { checkTrax, getCourierSettings, type CourierSettings, type TraxCheck } from '@/app/admin/backend-actions';
-import { CourierSettingsForm, SyncCitiesButton, TraxStatus } from '@/components/admin/DeliverySettings';
+import { CourierSettingsForm, SyncCitiesButton, TraxRateTester, TraxStatus } from '@/components/admin/DeliverySettings';
 
 export const metadata: Metadata = { title: 'Delivery' };
 export const dynamic = 'force-dynamic';
@@ -33,6 +33,13 @@ export default async function DeliveryPage() {
         <div className="mt-4">
           <SyncCitiesButton />
         </div>
+      </section>
+      <section>
+        <h2 className="text-2xl font-bold text-slate-950">Test Trax rates</h2>
+        <p className="mb-4 mt-1 text-sm text-slate-500">
+          Asks Trax what each service would charge, with Rs 5,000 cash on delivery. Nothing is booked. Sync cities first.
+        </p>
+        <TraxRateTester />
       </section>
       {settings && (
         <section>

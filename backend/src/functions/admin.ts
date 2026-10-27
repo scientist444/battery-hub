@@ -361,6 +361,32 @@ app.http('adminTraxCheck', {
   }),
 });
 
+/** Ask Trax for a real rate per service from Rawalpindi, without booking. Used to check service IDs before going live. */
+app.http('adminTraxRate', {
+  methods: ['GET'],
+  route: 'manage/trax/rate',
+  authLevel: 'anonymous',
+  handler: route('admin', async (request) => {
+    const cities = await getCities();
+    const find = (id: string) => cities.find((c) => c.id === id);
+    const destination = find(request.query.get('cityId') ?? '');
+    const origin = find('rawalpindi');
+    if (!destination || !origin) throw new HttpError(400, 'Unknown city. Sync cities from Trax first.');
+    const weightG = Number(request.query.get('weightG') ?? 1000);
+    if (!Number.isInteger(weightG) || weightG <= 0) throw new HttpError(400, 'Weight must be whole grams.');
+    const settings = await getSettings();
+    const rates = await Promise.all(
+      settings.services.map(async (service) => ({
+        code: service.code,
+        name: service.name,
+        courierId: service.courierId,
+        result: await attempt(() => trax.getRate({ origin, destination, weightG, codAmountPkr: 5000, service, timeoutMs: 10000 })),
+      })),
+    );
+    return json({ origin: origin.name, destination: destination.name, weightG, rates });
+  }),
+});
+
 // ---------- One-time import ----------
 
 const importSchema = z.object({

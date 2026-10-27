@@ -283,3 +283,23 @@ export async function saveCourierSettings(patch: Pick<CourierSettings, 'courierM
     return failure(error);
   }
 }
+
+export interface TraxRateTest {
+  origin: string;
+  destination: string;
+  weightG: number;
+  rates: { code: string; name: string; courierId?: number; result: Attempt<number> }[];
+}
+
+export async function testTraxRate(cityId: string, weightG: number): Promise<{ ok: true; test: TraxRateTest } | { ok: false; message: string }> {
+  await requireAdmin();
+  try {
+    const test = await backendFetch<TraxRateTest>('admin', 'manage/trax/rate', {
+      query: { cityId, weightG: String(weightG) },
+      timeoutMs: 20000,
+    });
+    return { ok: true, test };
+  } catch (error) {
+    return failure(error) as { ok: false; message: string };
+  }
+}

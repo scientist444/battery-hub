@@ -99,7 +99,7 @@ export async function listTraxPickupAddresses(): Promise<TraxPickupAddress[]> {
 export const trax: Courier = {
   name: 'trax',
 
-  async getRate({ origin, destination, weightG, codAmountPkr, service }: RateRequest) {
+  async getRate({ origin, destination, weightG, codAmountPkr, service, timeoutMs = 2000 }: RateRequest) {
     const body = await call<{ information?: { charges?: { total_charges?: number } } }>(
       'GET',
       '/charges_calculate',
@@ -112,7 +112,7 @@ export const trax: Courier = {
         amount: codAmountPkr,
       },
       // Checkout must not wait on Trax; callers fall back to the cached or flat rate.
-      2000,
+      timeoutMs,
     );
     const total = body.information?.charges?.total_charges;
     if (typeof total !== 'number') throw new TraxError('Trax returned no charges.', body);

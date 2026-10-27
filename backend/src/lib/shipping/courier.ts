@@ -6,6 +6,8 @@ export interface RateRequest {
   weightG: number;
   codAmountPkr: number;
   service: CourierService;
+  /** Defaults to a short wait so checkout never hangs on the courier. */
+  timeoutMs?: number;
 }
 
 export interface BookingRequest {
