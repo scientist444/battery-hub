@@ -37,7 +37,7 @@ export default async function DeliveryPage() {
       <section>
         <h2 className="text-2xl font-bold text-slate-950">Test Trax rates</h2>
         <p className="mb-4 mt-1 text-sm text-slate-500">
-          Asks Trax what each service would charge, with Rs 5,000 cash on delivery. Nothing is booked. Sync cities first.
+          Asks Trax what each service would charge including GST, with Rs 5,000 cash on delivery. Nothing is booked. Sync cities first.
         </p>
         <TraxRateTester />
       </section>
