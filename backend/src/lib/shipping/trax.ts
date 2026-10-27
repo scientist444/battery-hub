@@ -96,27 +96,38 @@ export async function listTraxPickupAddresses(): Promise<TraxPickupAddress[]> {
   });
 }
 
+/** Trax's charge for one service, plus the rest of its reply (shown in the admin rate test). */
+export async function calculateCharges({ origin, destination, weightG, codAmountPkr, service, timeoutMs = 2000 }: RateRequest) {
+  const body = await call<{ information?: Record<string, unknown> & { charges?: { total_charges?: number } } }>(
+    'POST',
+    '/charges_calculate',
+    {
+      service_type_id: SERVICE_TYPE_REGULAR,
+      origin_city_id: requireTraxCity(origin.traxCityId, origin.name),
+      destination_city_id: requireTraxCity(destination.traxCityId, destination.name),
+      estimated_weight: weightG / 1000,
+      shipping_mode_id: service.courierId ?? 0,
+      amount: codAmountPkr,
+    },
+    // Checkout must not wait on Trax; callers fall back to the cached or flat rate.
+    timeoutMs,
+  );
+  const total = body.information?.charges?.total_charges;
+  if (typeof total !== 'number') throw new TraxError('Trax returned no charges.', body);
+  return { total: Math.ceil(total), information: body.information };
+}
+
+/** Trax's own list of shipping modes, if the account exposes it. */
+export async function listTraxShippingModes() {
+  return call<Record<string, unknown>>('GET', '/shipping_modes', {});
+}
+
 export const trax: Courier = {
   name: 'trax',
 
-  async getRate({ origin, destination, weightG, codAmountPkr, service, timeoutMs = 2000 }: RateRequest) {
-    const body = await call<{ information?: { charges?: { total_charges?: number } } }>(
-      'POST',
-      '/charges_calculate',
-      {
-        service_type_id: SERVICE_TYPE_REGULAR,
-        origin_city_id: requireTraxCity(origin.traxCityId, origin.name),
-        destination_city_id: requireTraxCity(destination.traxCityId, destination.name),
-        estimated_weight: weightG / 1000,
-        shipping_mode_id: service.courierId ?? 0,
-        amount: codAmountPkr,
-      },
-      // Checkout must not wait on Trax; callers fall back to the cached or flat rate.
-      timeoutMs,
-    );
-    const total = body.information?.charges?.total_charges;
-    if (typeof total !== 'number') throw new TraxError('Trax returned no charges.', body);
-    return Math.ceil(total);
+  async getRate(request: RateRequest) {
+    const { total } = await calculateCharges(request);
+    return total;
   },
 
   async book({ order, shipment, destination, service, itemDescription, itemCount }: BookingRequest): Promise<BookingResult> {
