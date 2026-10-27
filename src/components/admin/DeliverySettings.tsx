@@ -210,16 +210,6 @@ export function TraxRateTester() {
           ))}
         </ul>
       )}
-      {test && (
-        <div>
-          <p className="font-semibold text-slate-950">Trax shipping modes</p>
-          {test.shippingModes.ok ? (
-            <pre className="mt-1 whitespace-pre-wrap break-all text-xs text-slate-600">{JSON.stringify(test.shippingModes.value)}</pre>
-          ) : (
-            <Failure {...test.shippingModes} />
-          )}
-        </div>
-      )}
     </div>
   );
 }

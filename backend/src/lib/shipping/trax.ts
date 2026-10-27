@@ -98,7 +98,7 @@ export async function listTraxPickupAddresses(): Promise<TraxPickupAddress[]> {
 
 /** Trax's charge for one service, plus the rest of its reply (shown in the admin rate test). */
 export async function calculateCharges({ origin, destination, weightG, codAmountPkr, service, timeoutMs = 2000 }: RateRequest) {
-  const body = await call<{ information?: Record<string, unknown> & { charges?: { total_charges?: number } } }>(
+  const body = await call<{ information?: Record<string, unknown> & { charges?: { total_charges?: number; gst?: number } } }>(
     'POST',
     '/charges_calculate',
     {
@@ -112,14 +112,10 @@ export async function calculateCharges({ origin, destination, weightG, codAmount
     // Checkout must not wait on Trax; callers fall back to the cached or flat rate.
     timeoutMs,
   );
-  const total = body.information?.charges?.total_charges;
-  if (typeof total !== 'number') throw new TraxError('Trax returned no charges.', body);
-  return { total: Math.ceil(total), information: body.information };
-}
-
-/** Trax's own list of shipping modes, if the account exposes it. */
-export async function listTraxShippingModes() {
-  return call<Record<string, unknown>>('GET', '/shipping_modes', {});
+  const charges = body.information?.charges;
+  if (typeof charges?.total_charges !== 'number') throw new TraxError('Trax returned no charges.', body);
+  // Trax bills GST on top of total_charges (net_payable = COD - total_charges - gst), so the customer pays both.
+  return { total: Math.ceil(charges.total_charges + (charges.gst ?? 0)), information: body.information };
 }
 
 export const trax: Courier = {
