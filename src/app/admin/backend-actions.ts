@@ -288,7 +288,8 @@ export interface TraxRateTest {
   origin: string;
   destination: string;
   weightG: number;
-  rates: { code: string; name: string; courierId?: number; result: Attempt<number> }[];
+  rates: { code: string; name: string; courierId?: number; result: Attempt<number>; details?: Record<string, unknown> }[];
+  shippingModes: Attempt<Record<string, unknown>>;
 }
 
 export async function testTraxRate(cityId: string, weightG: number): Promise<{ ok: true; test: TraxRateTest } | { ok: false; message: string }> {

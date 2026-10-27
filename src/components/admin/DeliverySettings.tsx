@@ -202,10 +202,23 @@ export function TraxRateTester() {
               <span className="w-28 shrink-0 font-medium">
                 {r.name} <span className="text-xs text-slate-400">(ID {r.courierId ?? '-'})</span>
               </span>
-              {r.result.ok ? <span className="text-emerald-700">Rs {r.result.value}</span> : <Failure {...r.result} />}
+              <span className="min-w-0">
+                {r.result.ok ? <span className="text-emerald-700">Rs {r.result.value}</span> : <Failure {...r.result} />}
+                {r.details && <pre className="mt-1 whitespace-pre-wrap break-all text-xs text-slate-500">{JSON.stringify(r.details)}</pre>}
+              </span>
             </li>
           ))}
         </ul>
+      )}
+      {test && (
+        <div>
+          <p className="font-semibold text-slate-950">Trax shipping modes</p>
+          {test.shippingModes.ok ? (
+            <pre className="mt-1 whitespace-pre-wrap break-all text-xs text-slate-600">{JSON.stringify(test.shippingModes.value)}</pre>
+          ) : (
+            <Failure {...test.shippingModes} />
+          )}
+        </div>
       )}
     </div>
   );

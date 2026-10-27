@@ -9,7 +9,7 @@ import { HttpError, json, parseBody, route } from '../lib/http';
 import { getOrder, restoreStock, saveOrder } from '../lib/orders';
 import { getSettings, saveSettings } from '../lib/settings';
 import { trax } from '../lib/shipping/courier-registry';
-import { listTraxCities, listTraxPickupAddresses, TraxError } from '../lib/shipping/trax';
+import { calculateCharges, listTraxCities, listTraxPickupAddresses, listTraxShippingModes, TraxError } from '../lib/shipping/trax';
 import { Order, Product, StoreSettings, Supplier } from '../lib/types';
 import { catalogSyncSchema, categorySchema, manualTrackingSchema, productSchema, statusChangeSchema, supplierSchema } from '../lib/validation';
 
@@ -375,15 +375,22 @@ app.http('adminTraxRate', {
     const weightG = Number(request.query.get('weightG') ?? 1000);
     if (!Number.isInteger(weightG) || weightG <= 0) throw new HttpError(400, 'Weight must be whole grams.');
     const settings = await getSettings();
-    const rates = await Promise.all(
-      settings.services.map(async (service) => ({
-        code: service.code,
-        name: service.name,
-        courierId: service.courierId,
-        result: await attempt(() => trax.getRate({ origin, destination, weightG, codAmountPkr: 5000, service, timeoutMs: 10000 })),
-      })),
-    );
-    return json({ origin: origin.name, destination: destination.name, weightG, rates });
+    const [rates, shippingModes] = await Promise.all([
+      Promise.all(
+        settings.services.map(async (service) => {
+          const result = await attempt(() => calculateCharges({ origin, destination, weightG, codAmountPkr: 5000, service, timeoutMs: 10000 }));
+          return {
+            code: service.code,
+            name: service.name,
+            courierId: service.courierId,
+            result: result.ok ? { ok: true as const, value: result.value.total } : result,
+            details: result.ok ? result.value.information : undefined,
+          };
+        }),
+      ),
+      attempt(listTraxShippingModes),
+    ]);
+    return json({ origin: origin.name, destination: destination.name, weightG, rates, shippingModes });
   }),
 });
 
