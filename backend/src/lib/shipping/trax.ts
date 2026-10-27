@@ -101,7 +101,7 @@ export const trax: Courier = {
 
   async getRate({ origin, destination, weightG, codAmountPkr, service, timeoutMs = 2000 }: RateRequest) {
     const body = await call<{ information?: { charges?: { total_charges?: number } } }>(
-      'GET',
+      'POST',
       '/charges_calculate',
       {
         service_type_id: SERVICE_TYPE_REGULAR,
