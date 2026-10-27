@@ -44,7 +44,7 @@ async function call<T>(method: 'GET' | 'POST', path: string, params: Record<stri
   const body = (await response.json().catch(() => undefined)) as { status?: number; message?: string } | undefined;
   // Trax answers status 0 for success.
   if (!response.ok || !body || body.status !== 0) {
-    throw new TraxError(`Trax ${path} failed: ${body?.message ?? response.statusText}`, body);
+    throw new TraxError(`Trax ${path} failed (HTTP ${response.status}): ${body?.message ?? response.statusText}`, body);
   }
   return body as T;
 }
@@ -76,6 +76,24 @@ interface TraxCity {
 export async function listTraxCities(): Promise<TraxCity[]> {
   const body = await call<{ cities: TraxCity[] }>('GET', '/cities', {});
   return body.cities ?? [];
+}
+
+export interface TraxPickupAddress {
+  id: number;
+  label: string;
+}
+
+/** Pickup addresses saved in the Trax portal, so the admin can pick the supplier's ID. */
+export async function listTraxPickupAddresses(): Promise<TraxPickupAddress[]> {
+  const body = await call<{ pickup_addresses?: Record<string, unknown>[] }>('GET', '/pickup_addresses', {});
+  return (body.pickup_addresses ?? []).map((a) => {
+    const city = a.city as { name?: string } | string | undefined;
+    const cityName = typeof city === 'string' ? city : city?.name;
+    return {
+      id: Number(a.id),
+      label: [a.contact_person_name ?? a.name, a.address, cityName].filter(Boolean).join(', '),
+    };
+  });
 }
 
 export const trax: Courier = {

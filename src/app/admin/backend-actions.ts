@@ -221,3 +221,65 @@ export async function setRequestStatus(
   revalidatePath('/admin');
   return { ok: true, message: 'Updated' };
 }
+
+// ---------- Delivery (Trax) ----------
+
+export interface CourierServiceSetting {
+  code: string;
+  name: string;
+  enabled: boolean;
+  courierId?: number;
+  etaDays?: string;
+}
+
+export interface CourierSettings {
+  courierMode: 'flat' | 'trax';
+  autoBook: boolean;
+  services: (CourierServiceSetting & Record<string, unknown>)[];
+}
+
+type Attempt<T> = { ok: true; value: T } | { ok: false; error: string; responseKeys?: string[] };
+
+export interface TraxCheck {
+  cities: Attempt<number>;
+  pickupAddresses: Attempt<{ id: number; label: string }[]>;
+}
+
+export async function getCourierSettings(): Promise<CourierSettings> {
+  await requireAdmin();
+  const { settings } = await backendFetch<{ settings: CourierSettings }>('admin', 'manage/settings');
+  return settings;
+}
+
+export async function checkTrax(): Promise<TraxCheck> {
+  await requireAdmin();
+  return backendFetch<TraxCheck>('admin', 'manage/trax/check', { timeoutMs: 20000 });
+}
+
+export async function syncTraxCities(): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    const r = await backendFetch<{ matched: number; missing: string[]; traxCityCount: number }>('admin', 'manage/cities/sync', {
+      method: 'POST',
+      timeoutMs: 20000,
+    });
+    const missing = r.missing.length ? ` Not found in Trax: ${r.missing.join(', ')}.` : '';
+    return { ok: true, message: `Trax has ${r.traxCityCount} cities; matched ${r.matched} of ours.${missing}` };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function saveCourierSettings(patch: Pick<CourierSettings, 'courierMode' | 'autoBook' | 'services'>): Promise<UpdateResult> {
+  await requireAdmin();
+  if (patch.services.some((s) => s.courierId !== undefined && (!Number.isInteger(s.courierId) || s.courierId < 0))) {
+    return { ok: false, message: 'Trax service IDs must be whole numbers.' };
+  }
+  try {
+    await backendFetch('admin', 'manage/settings', { method: 'PATCH', body: patch });
+    revalidatePath('/admin/delivery');
+    return { ok: true, message: 'Saved.' };
+  } catch (error) {
+    return failure(error);
+  }
+}

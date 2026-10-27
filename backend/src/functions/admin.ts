@@ -9,7 +9,7 @@ import { HttpError, json, parseBody, route } from '../lib/http';
 import { getOrder, restoreStock, saveOrder } from '../lib/orders';
 import { getSettings, saveSettings } from '../lib/settings';
 import { trax } from '../lib/shipping/courier-registry';
-import { listTraxCities } from '../lib/shipping/trax';
+import { listTraxCities, listTraxPickupAddresses, TraxError } from '../lib/shipping/trax';
 import { Order, Product, StoreSettings, Supplier } from '../lib/types';
 import { catalogSyncSchema, categorySchema, manualTrackingSchema, productSchema, statusChangeSchema, supplierSchema } from '../lib/validation';
 
@@ -334,6 +334,30 @@ app.http('adminSyncCities', {
     invalidateCatalog();
     const missing = cities.filter((c) => !c.traxCityId).map((c) => c.name);
     return json({ matched: cities.length - missing.length, missing, traxCityCount: traxCities.length });
+  }),
+});
+
+async function attempt<T>(fn: () => Promise<T>) {
+  try {
+    return { ok: true as const, value: await fn() };
+  } catch (error) {
+    const body = error instanceof TraxError && error.response && typeof error.response === 'object' ? error.response : undefined;
+    // Only the field names: enough to match Trax's response shape without echoing data.
+    return { ok: false as const, error: (error as Error).message, responseKeys: body ? Object.keys(body) : undefined };
+  }
+}
+
+/** Check the Trax key with read-only calls: city count and the pickup addresses saved in the Trax portal. */
+app.http('adminTraxCheck', {
+  methods: ['GET'],
+  route: 'manage/trax/check',
+  authLevel: 'anonymous',
+  handler: route('admin', async () => {
+    const [cities, pickupAddresses] = await Promise.all([
+      attempt(async () => (await listTraxCities()).length),
+      attempt(listTraxPickupAddresses),
+    ]);
+    return json({ cities, pickupAddresses });
   }),
 });
 
