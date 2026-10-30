@@ -6,6 +6,7 @@ import { getCities, quoteContext } from '../lib/context';
 import { getSecret } from '../lib/secrets';
 import { HttpError, json, parseBody, route } from '../lib/http';
 import { createOrder, findOrderByNumber } from '../lib/orders';
+import { getVapidKeys, newOrderMessage, notifyAdmins } from '../lib/push';
 import { buildQuote, publicQuote } from '../lib/quote';
 import { accountId, accountSchema, orderSchema, pkMobile, quoteSchema } from '../lib/validation';
 import { container, queryAll, readDoc } from '../lib/cosmos';
@@ -53,7 +54,11 @@ app.http('health', {
         (value) => (value ? 'ok' : 'missing'),
         (error: { code?: string; statusCode?: number; name?: string }) => String(error.code ?? error.statusCode ?? error.name ?? 'error'),
       );
-      return json({ ok: true, products: products.length, keys, version: VERSION });
+      const push = await getVapidKeys().then(
+        (vapid) => (vapid ? 'ok' : 'missing'),
+        () => 'error',
+      );
+      return json({ ok: true, products: products.length, keys, push, version: VERSION });
     } catch (error) {
       context.error('Health check failed', error);
       // Error code only (no message or data), to tell configuration problems from outages.
@@ -140,6 +145,8 @@ app.http('placeOrder', {
       context.extraOutputs.set(bookingQueue, { orderId: order.id });
     }
     context.log(`Order ${order.number} placed (${order.status}), total Rs. ${order.totalPkr}`);
+    // Ping the admin phones. Awaited so the function is not frozen mid-send; it never throws.
+    await notifyAdmins(newOrderMessage(order), (msg) => context.warn(msg));
 
     return json(
       {

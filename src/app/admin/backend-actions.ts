@@ -338,3 +338,55 @@ export async function testTraxRate(cityId: string, weightG: number): Promise<{ o
     return failure(error) as { ok: false; message: string };
   }
 }
+
+// ---------- Phone notifications ----------
+
+export interface PushDevice {
+  id: string;
+  label: string;
+  createdAt: string;
+  endpoint: string;
+}
+
+export async function getPushStatus(): Promise<{ publicKey: string | null; devices: PushDevice[] } | { error: string }> {
+  await requireAdmin();
+  try {
+    return await backendFetch<{ publicKey: string | null; devices: PushDevice[] }>('admin', 'manage/push');
+  } catch (error) {
+    return { error: failure(error).message };
+  }
+}
+
+export async function savePushSubscription(
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+  label: string,
+): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    await backendFetch('admin', 'manage/push/subscribe', { body: { subscription, label } });
+    return { ok: true, message: 'Notifications are on for this phone.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function removePushSubscription(endpoint: string): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    await backendFetch('admin', 'manage/push/unsubscribe', { body: { endpoint } });
+    return { ok: true, message: 'Notifications are off for that device.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function sendTestPush(): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    const r = await backendFetch<{ sent: number; failed: number; removed: number }>('admin', 'manage/push/test', { body: {} });
+    if (r.sent === 0) return { ok: false, message: 'No phone received it. Turn notifications on first.' };
+    return { ok: true, message: `Test sent to ${r.sent} device${r.sent === 1 ? '' : 's'}.${r.failed ? ` ${r.failed} failed.` : ''}` };
+  } catch (error) {
+    return failure(error);
+  }
+}

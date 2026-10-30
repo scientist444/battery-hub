@@ -9,6 +9,7 @@ import { allowedServices, chooseService, weightBand } from '../src/lib/shipping/
 import { mapTraxStatus } from '../src/lib/shipping/trax';
 import { Order, Product, StoreSettings, Supplier } from '../src/lib/types';
 import { pkMobile } from '../src/lib/validation';
+import { newOrderMessage, subscriptionId } from '../src/lib/push';
 
 const city = (id: string) => findCity(id)!;
 
@@ -227,4 +228,27 @@ test('every storefront product has a weight estimate, and a set weight wins', as
   assert.equal(Object.keys(ESTIMATED_WEIGHTS_G).length, products.length);
   assert.equal(productWeightG({ id: 'PS-12V-33A-400W' }), 900);
   assert.equal(productWeightG({ id: 'PS-12V-33A-400W', weightG: 1200 }), 1200);
+});
+
+test('new order notification text', () => {
+  const message = newOrderMessage({
+    number: 'BH-1042',
+    status: 'on_hold',
+    totalPkr: 15450,
+    paymentMethod: 'cod',
+    customer: { name: 'Ali', phone: '03001234567', cityId: 'lahore', cityName: 'Lahore', province: 'Punjab', address: 'x' },
+    items: [
+      { productId: 'a', name: 'A', qty: 2 } as Order['items'][number],
+      { productId: 'b', name: 'B', qty: 1 } as Order['items'][number],
+    ],
+  });
+  assert.equal(message.title, 'New order BH-1042 (on hold, check it)');
+  assert.equal(message.body, 'Rs. 15,450 · COD · 3 items · Ali, Lahore');
+  assert.equal(message.url, '/admin/orders');
+});
+
+test('push subscription id is stable and Cosmos-safe', () => {
+  const id = subscriptionId('https://fcm.googleapis.com/fcm/send/abc?x=1#y');
+  assert.equal(id, subscriptionId('https://fcm.googleapis.com/fcm/send/abc?x=1#y'));
+  assert.match(id, /^push-[0-9a-f]{32}$/);
 });
