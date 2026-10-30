@@ -209,3 +209,13 @@ test('review summary: average to one decimal and star counts', async () => {
   assert.deepEqual(summarize([]), { average: 0, count: 0, stars: [0, 0, 0, 0, 0] });
   assert.deepEqual(summarize([{ rating: 5 }, { rating: 4 }, { rating: 4 }]), { average: 4.3, count: 3, stars: [0, 0, 0, 2, 1] });
 });
+
+test('every storefront product has a weight estimate, and a set weight wins', async () => {
+  const { ESTIMATED_WEIGHTS_G, productWeightG } = await import('../src/lib/weights');
+  const { readCatalog, toApiProduct } = require('../scripts/build-seed') as typeof import('../scripts/build-seed');
+  const products = readCatalog(require('path').join(__dirname, '..', '..', '..', 'src', 'data', 'products.ts')).map((p) => toApiProduct(p));
+  for (const p of products) assert.ok(ESTIMATED_WEIGHTS_G[p.id], `no weight for ${p.id}`);
+  assert.equal(Object.keys(ESTIMATED_WEIGHTS_G).length, products.length);
+  assert.equal(productWeightG({ id: 'PS-12V-33A-400W' }), 900);
+  assert.equal(productWeightG({ id: 'PS-12V-33A-400W', weightG: 1200 }), 1200);
+});
