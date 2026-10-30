@@ -67,3 +67,10 @@ export async function backendFetch<T>(
   }
   return data as T;
 }
+
+/** Fetch a file (e.g. a Trax label PDF) from the API; errors come back as a non-OK Response. */
+export async function backendFile(access: Access, path: string): Promise<Response> {
+  const cfg = config(access);
+  if (!cfg) return new Response('Online ordering is not set up yet.', { status: 503 });
+  return fetch(`${cfg.url}/${path}`, { headers: { 'x-api-key': cfg.key }, cache: 'no-store', signal: AbortSignal.timeout(20_000) });
+}
