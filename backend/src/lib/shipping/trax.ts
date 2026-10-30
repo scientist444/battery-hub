@@ -3,19 +3,28 @@ import { OrderStatus, ShipmentEvent } from '../types';
 import { BookingRequest, BookingResult, Courier, RateRequest, TrackingResult } from './courier';
 
 /*
- * Trax merchant API (Sonic platform). Endpoint paths and field names follow the public
- * "Sonic API document v2"; confirm every one against the copy Trax issues before switching
- * courierMode to 'trax'. All Trax specifics live in this file.
+ * Trax merchant API (Sonic platform), per Trax's "API Document - SONIC Version 2.0".
+ * Appendix IDs below are from that document. All Trax specifics live in this file.
  */
 
 const BASE_URL = process.env.TRAX_BASE_URL || 'https://sonic.pk/api';
 const TIMEOUT_MS = 8000;
 
-const PAYMENT_MODE_COD = 1;
+// Appendix A: Regular.
 const SERVICE_TYPE_REGULAR = 1;
-const ITEM_PRODUCT_TYPE_ELECTRONICS = 1;
-// Who pays Trax's charges: billed to the BatteryHUB account, not collected from the consignee. Confirm the ID with Trax.
-const CHARGES_MODE_SHIPPER = 4;
+// Appendix B: Electronics Accessories (Cases, Chargers, etc.), the closest type to batteries.
+const ITEM_PRODUCT_TYPE_ELECTRONICS_ACCESSORIES = 5;
+// Appendix D: COD. Prepaid orders are booked as COD with amount 0.
+const PAYMENT_MODE_COD = 1;
+// Appendix F: Reimbursement, Trax deducts its charges from the COD it pays out.
+const CHARGES_MODE_REIMBURSEMENT = 4;
+// Trax requires a consignee email; customers who gave none get the store's.
+const FALLBACK_EMAIL = process.env.STORE_EMAIL || 'orders@batteryhub.com.pk';
+
+/** Today's date in Pakistan (UTC+5) as YYYY-MM-DD, for pickup_date. */
+function pickupDate(now = new Date()) {
+  return new Date(now.getTime() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 
 export class TraxError extends Error {
   constructor(message: string, public response?: unknown) {
@@ -71,6 +80,7 @@ export function mapTraxStatus(text: string): OrderStatus | null {
 interface TraxCity {
   id: number;
   name: string;
+  delivery?: { Regular?: string[] };
 }
 
 export async function listTraxCities(): Promise<TraxCity[]> {
@@ -91,7 +101,7 @@ export async function listTraxPickupAddresses(): Promise<TraxPickupAddress[]> {
     const cityName = typeof city === 'string' ? city : city?.name;
     return {
       id: Number(a.id),
-      label: [a.contact_person_name ?? a.name, a.address, cityName].filter(Boolean).join(', '),
+      label: [a.person_of_contact, a.address, cityName].filter(Boolean).join(', '),
     };
   });
 }
@@ -131,34 +141,38 @@ export const trax: Courier = {
       throw new TraxError(`Supplier ${shipment.supplierId} has no Trax pickup address ID.`);
     }
     const customer = order.customer;
-    const body = await call<{ tracking_number?: string | number }>('POST', '/shipment/book', {
+    // The document's sample reply spells the key "tracking number"; accept either spelling.
+    const body = await call<{ tracking_number?: string | number; 'tracking number'?: string | number }>('POST', '/shipment/book', {
       service_type_id: SERVICE_TYPE_REGULAR,
       pickup_address_id: shipment.pickup.traxPickupAddressId,
       information_display: 0,
       consignee_city_id: requireTraxCity(destination.traxCityId, destination.name),
-      consignee_name: customer.name,
-      consignee_address: [customer.address, customer.landmark].filter(Boolean).join(', '),
+      consignee_name: customer.name.slice(0, 100),
+      consignee_address: [customer.address, customer.landmark].filter(Boolean).join(', ').slice(0, 190),
       consignee_phone_number_1: customer.phone,
-      consignee_email_address: customer.email ?? '',
+      consignee_email_address: customer.email || FALLBACK_EMAIL,
       order_id: shipment.itemIndexes.length === order.items.length ? order.number : `${order.number}-${shipment.supplierId}`,
-      item_product_type_id: ITEM_PRODUCT_TYPE_ELECTRONICS,
-      item_description: itemDescription.slice(0, 250),
+      item_product_type_id: ITEM_PRODUCT_TYPE_ELECTRONICS_ACCESSORIES,
+      item_description: itemDescription.slice(0, 190),
       item_quantity: itemCount,
       item_insurance: 0,
-      item_price: shipment.codAmountPkr,
-      special_instructions: 'Open parcel allowed. Handle with care.',
+      pickup_date: pickupDate(),
+      special_instructions: 'Batteries. Handle with care.',
       estimated_weight: shipment.weightG / 1000,
       shipping_mode_id: service.courierId ?? 0,
-      amount: shipment.codAmountPkr,
+      amount: Math.round(shipment.codAmountPkr),
       payment_mode_id: PAYMENT_MODE_COD,
-      charges_mode_id: CHARGES_MODE_SHIPPER,
+      charges_mode_id: CHARGES_MODE_REIMBURSEMENT,
+      // Trax's claim policy limits its liability on "allowed to open" shipments, so parcels stay closed.
+      open_shipment: 0,
     });
-    if (!body.tracking_number) throw new TraxError('Trax returned no tracking number.', body);
-    return { trackingNumber: String(body.tracking_number) };
+    const trackingNumber = body.tracking_number ?? body['tracking number'];
+    if (!trackingNumber) throw new TraxError('Trax returned no tracking number.', body);
+    return { trackingNumber: String(trackingNumber) };
   },
 
   async track(trackingNumber: string): Promise<TrackingResult> {
-    const body = await call<{ details?: { tracking_history?: { status?: string; status_reason?: string; date_time?: string }[] } }>(
+    const body = await call<{ details?: { tracking_history?: { status?: string; status_reason?: string; timestamp?: number }[] } }>(
       'GET',
       '/shipment/track',
       { tracking_number: trackingNumber, type: 0 },
@@ -167,7 +181,8 @@ export const trax: Courier = {
     const events: ShipmentEvent[] = history.map((h) => ({
       status: h.status ?? '',
       message: [h.status, h.status_reason].filter(Boolean).join(' - '),
-      at: h.date_time ? new Date(h.date_time).toISOString() : new Date().toISOString(),
+      // date_time is "DD/MM/YYYY hh:mm AM", which Date can't parse; timestamp is Unix seconds.
+      at: h.timestamp ? new Date(h.timestamp * 1000).toISOString() : new Date().toISOString(),
     }));
     events.sort((a, b) => a.at.localeCompare(b.at));
     const latest = events.at(-1)?.status ?? '';
@@ -179,7 +194,8 @@ export const trax: Courier = {
     if (!apiKey) throw new TraxError('Trax API key is not set in Key Vault (secret trax-api-key).');
     const url = new URL(`${BASE_URL}/shipment/air_waybill`);
     url.searchParams.set('tracking_number', trackingNumber);
-    url.searchParams.set('type', '0');
+    // type 1 = PDF (0 is JPEG).
+    url.searchParams.set('type', '1');
     const response = await fetch(url, { headers: { Authorization: apiKey }, signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!response.ok) throw new TraxError(`Trax label failed: ${response.statusText}`);
     return Buffer.from(await response.arrayBuffer());

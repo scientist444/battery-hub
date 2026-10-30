@@ -132,6 +132,13 @@ test('quote in trax mode uses live rates and falls back to the flat table when T
   assert.equal(down.deliveryFeePkr, DEFAULT_SETTINGS.flatRates.otherProvince);
 });
 
+test('quote in trax mode only offers the services Trax delivers to the city', async () => {
+  const base = ctx({ courierMode: 'trax' }, [product({})]);
+  const cities = base.cities.map((c) => (c.id === 'karachi' ? { ...c, traxModes: ['Rush', 'Saver Plus'] } : c));
+  const quote = await buildQuote([{ productId: 'P1', qty: 1 }], 'karachi', undefined, { ...base, cities });
+  assert.deepEqual(quote.shipments[0].options.map((o) => o.code).sort(), ['rush', 'saver_plus']);
+});
+
 test('quote refuses unknown cities, missing products and short stock', async () => {
   const c = ctx({}, [product({ stock: 1 })]);
   await assert.rejects(buildQuote([{ productId: 'P1', qty: 1 }], 'atlantis', undefined, c), /do not deliver/);

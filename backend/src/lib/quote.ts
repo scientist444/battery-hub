@@ -89,7 +89,10 @@ export async function buildQuote(lines: CartLine[], cityId: string, preferredSer
     if (settings.courierMode === 'flat') {
       options = [{ ...STANDARD, feePkr: flatFee }];
     } else {
-      const services = allowedServices(settings, weightG, containsLithium);
+      // Only services Trax delivers to this city (known after a city sync).
+      const services = allowedServices(settings, weightG, containsLithium).filter(
+        (s) => !city.traxModes || city.traxModes.some((m) => m.toLowerCase() === s.name.toLowerCase()),
+      );
       if (services.length === 0) throw new HttpError(409, 'No delivery service can carry this order. Please contact us on WhatsApp.');
       const priced = await Promise.all(
         services.map(async (service): Promise<ServiceOption | undefined> => {

@@ -66,6 +66,8 @@ export interface City {
   province: string;
   /** City ID in Trax's system, when known. */
   traxCityId?: number;
+  /** Trax shipping modes that deliver here for regular shipments (e.g. "Rush", "Saver Plus"), from the city sync. */
+  traxModes?: string[];
 }
 
 export type Transport = 'road' | 'air' | 'unknown';

@@ -326,10 +326,13 @@ app.http('adminSyncCities', {
   authLevel: 'anonymous',
   handler: route('admin', async () => {
     const traxCities = await listTraxCities();
-    const byName = new Map(traxCities.map((c) => [c.name.trim().toLowerCase(), c.id]));
+    const byName = new Map(traxCities.map((c) => [c.name.trim().toLowerCase(), c]));
     const current = await getCities();
     const base = current.length ? current : CITIES;
-    const cities = base.map((city) => ({ ...city, traxCityId: byName.get(city.name.toLowerCase().replace(/\s*\(.*\)$/, '')) ?? city.traxCityId }));
+    const cities = base.map((city) => {
+      const match = byName.get(city.name.toLowerCase().replace(/\s*\(.*\)$/, ''));
+      return match ? { ...city, traxCityId: match.id, traxModes: match.delivery?.Regular } : city;
+    });
     await container('settings').items.upsert({ id: 'cities', cities });
     invalidateCatalog();
     const missing = cities.filter((c) => !c.traxCityId).map((c) => c.name);
