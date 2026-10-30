@@ -119,8 +119,17 @@ test('quote splits shipments by supplier and sums delivery', async () => {
 test('quote in trax mode uses live rates and falls back to the flat table when Trax fails', async () => {
   const rates: Record<string, number> = { rush: 320, swift: 280, saver_plus: 260 };
   const live = await buildQuote([{ productId: 'P1', qty: 1 }], 'karachi', undefined, ctx({ courierMode: 'trax' }, [product({})], async (_o, _d, _w, _c, s) => rates[s.code]));
-  assert.equal(live.shipments[0].chosen.code, 'rush');
-  assert.equal(live.deliveryFeePkr, 320);
+  // Cheapest is Saver Plus (260), but Swift is within the Rs. 30 tie-break and ranked faster.
+  assert.equal(live.shipments[0].chosen.code, 'swift');
+  assert.equal(live.deliveryFeePkr, 280);
+  assert.deepEqual(live.shipments[0].options.map((o) => o.code), ['saver_plus', 'swift', 'rush']);
+  assert.ok(live.shipments[0].options.every((o) => !o.etaDays));
+
+  // Trax's real prices for this account: Rush is cheapest, even for a 3 kg parcel.
+  const real: Record<string, number> = { rush: 315, swift: 458, saver_plus: 573 };
+  const heavy = await buildQuote([{ productId: 'P1', qty: 30 }], 'lahore', undefined, ctx({ courierMode: 'trax' }, [product({})], async (_o, _d, _w, _c, s) => real[s.code]));
+  assert.equal(heavy.shipments[0].chosen.code, 'rush');
+  assert.equal(heavy.deliveryFeePkr, 315);
 
   const chosenByCustomer = await buildQuote([{ productId: 'P1', qty: 1 }], 'karachi', 'saver_plus', ctx({ courierMode: 'trax' }, [product({})], async (_o, _d, _w, _c, s) => rates[s.code]));
   assert.equal(chosenByCustomer.deliveryFeePkr, 260);
