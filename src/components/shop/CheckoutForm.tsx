@@ -43,6 +43,13 @@ function Field({ label, optional, children }: { label: string; optional?: boolea
   );
 }
 
+/** What each Trax service is for, from Trax's quotes: Saver Plus always bills at least 5 kg. */
+const SERVICE_DESCRIPTIONS: Record<string, string> = {
+  rush: 'Express courier. Best for small, light parcels.',
+  swift: 'Courier for medium parcels of a few kg.',
+  saver_plus: 'Economy courier for heavy parcels. Charged from 5 kg.',
+};
+
 export function CheckoutForm({
   cities,
   citiesError,
@@ -306,9 +313,7 @@ export function CheckoutForm({
                         <p className="text-xs text-slate-600">
                           {option.fareOnDelivery
                             ? 'Same day. You share your location on WhatsApp and pay the rider’s fare directly.'
-                            : option.etaDays
-                              ? `${option.etaDays} days`
-                              : 'Courier delivery'}
+                            : (SERVICE_DESCRIPTIONS[option.code] ?? (option.etaDays ? `${option.etaDays} days` : 'Courier delivery'))}
                         </p>
                       </div>
                       <span className="text-sm font-semibold text-slate-800">{option.fareOnDelivery ? 'Rider fare' : formatRupees(option.feePkr)}</span>
