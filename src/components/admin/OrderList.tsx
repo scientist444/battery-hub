@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { addTrackingNumber, setOrderStatus, type AdminOrder } from '@/app/admin/backend-actions';
+import { addTrackingNumber, bookWithTrax, refreshOrderTracking, setOrderStatus, type AdminOrder } from '@/app/admin/backend-actions';
 import { formatRupees } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
@@ -110,7 +110,26 @@ function OrderCard({ order }: { order: AdminOrder }) {
             )}
           </span>
           {shipment.trackingNumber ? (
-            <span className="font-semibold text-slate-900">Tracking {shipment.trackingNumber}</span>
+            <>
+              <span className="font-semibold text-slate-900">Tracking {shipment.trackingNumber}</span>
+              {shipment.courier === 'trax' && (
+                <span className="ml-auto flex items-center gap-3 text-xs font-semibold">
+                  {shipment.courierStatus && <span className="font-normal text-slate-600">{shipment.courierStatus}</span>}
+                  <a href={`/admin/label/${encodeURIComponent(order.id)}/${index}`} target="_blank" rel="noopener" className="text-blue-700 hover:underline">
+                    Trax label (PDF)
+                  </a>
+                  {!closed && (
+                    <button type="button" disabled={pending} onClick={() => run(() => refreshOrderTracking(order.id))} className="text-blue-700 hover:underline">
+                      Refresh tracking
+                    </button>
+                  )}
+                </span>
+              )}
+            </>
+          ) : shipment.courier === 'trax' && order.status === 'confirmed' ? (
+            <Button size="sm" className="ml-auto" disabled={pending} onClick={() => run(() => bookWithTrax(order.id))}>
+              Book with Trax
+            </Button>
           ) : (
             !closed && (
               <span className="ml-auto flex gap-2">

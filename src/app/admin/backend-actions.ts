@@ -99,6 +99,7 @@ export interface AdminOrder {
     courier: string;
     itemIndexes?: number[];
     trackingNumber?: string;
+    courierStatus?: string;
     serviceCode: string;
     weightG: number;
     codAmountPkr?: number;
@@ -143,6 +144,29 @@ export async function addTrackingNumber(orderId: string, shipmentIndex: number, 
   }
   revalidatePath('/admin/orders');
   return { ok: true, message: 'Tracking number saved' };
+}
+
+export async function bookWithTrax(orderId: string): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    await backendFetch('admin', `manage/orders/${encodeURIComponent(orderId)}/book`, { method: 'POST', timeoutMs: 30_000 });
+  } catch (error) {
+    revalidatePath('/admin/orders');
+    return failure(error);
+  }
+  revalidatePath('/admin/orders');
+  return { ok: true, message: 'Booked with Trax' };
+}
+
+export async function refreshOrderTracking(orderId: string): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    await backendFetch('admin', `manage/orders/${encodeURIComponent(orderId)}/refresh`, { method: 'POST', timeoutMs: 30_000 });
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath('/admin/orders');
+  return { ok: true, message: 'Tracking updated' };
 }
 
 // ---------- Reviews ----------
