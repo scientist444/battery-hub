@@ -107,7 +107,7 @@ export async function listTraxPickupAddresses(): Promise<TraxPickupAddress[]> {
 }
 
 /** Trax's charge for one service, plus the rest of its reply (shown in the admin rate test). */
-export async function calculateCharges({ origin, destination, weightG, codAmountPkr, service, timeoutMs = 2000 }: RateRequest) {
+export async function calculateCharges({ origin, destination, weightG, codAmountPkr, service, timeoutMs = 5000 }: RateRequest) {
   const body = await call<{ information?: Record<string, unknown> & { charges?: { total_charges?: number; gst?: number } } }>(
     'POST',
     '/charges_calculate',
