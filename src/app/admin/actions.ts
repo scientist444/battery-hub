@@ -7,7 +7,6 @@ import { revalidatePath } from 'next/cache';
 import { ADMIN_COOKIE, SESSION_TTL_SECONDS, createSessionToken, isAdminConfigured } from '@/lib/auth';
 import { requireAdmin } from '@/lib/admin-session';
 import { syncCatalogQuietly } from '@/lib/backend-catalog';
-import { put, del } from '@vercel/blob';
 import {
   deleteCustomProduct,
   deleteOverride,
@@ -18,6 +17,7 @@ import {
   setProductHidden,
 } from '@/lib/catalog';
 import { getRedis } from '@/lib/redis';
+import { deleteUploadedImages, isBlobConfigured, isUploadedImage, uploadProductImage } from '@/lib/blob';
 import { formatRupees } from '@/lib/format';
 import { stockStatusFromQty } from '@/lib/stock';
 import { STORE_CATEGORIES, createProductOrderMessage } from '@/config/store';
@@ -149,9 +149,9 @@ export async function resetProduct(id: string): Promise<UpdateResult> {
   await requireAdmin();
   try {
     // Photos uploaded for a spreadsheet product go back to the spreadsheet photos.
-    const uploaded = isBaseProduct(id) ? ((await getCatalogState()).overrides[id]?.images ?? []).filter(isBlobUrl) : [];
+    const uploaded = isBaseProduct(id) ? ((await getCatalogState()).overrides[id]?.images ?? []).filter(isUploadedImage) : [];
     await deleteOverride(id);
-    if (uploaded.length) await del(uploaded).catch((error) => console.error('Failed to delete product images', error));
+    await deleteUploadedImages(uploaded);
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Reset failed.' };
   }
@@ -165,11 +165,6 @@ function checkWeight(weightG: number | undefined) {
   }
 }
 
-/** Only photos uploaded from the admin live in Vercel Blob; spreadsheet photos are files in /public. */
-function isBlobUrl(url: string) {
-  return /^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//.test(url);
-}
-
 function imageFiles(formData: FormData) {
   return formData.getAll('images').filter((value): value is File => value instanceof File && value.size > 0);
 }
@@ -180,14 +175,14 @@ function checkImageFiles(files: File[]) {
     if (!file.type.startsWith('image/')) return `${file.name} is not an image.`;
     if (file.size > MAX_IMAGE_BYTES) return `${file.name} is larger than 4 MB.`;
   }
-  if (files.length > 0 && !process.env.BLOB_READ_WRITE_TOKEN) {
+  if (files.length > 0 && !isBlobConfigured()) {
     return 'Photo upload needs Vercel Blob storage. Connect it in Vercel > Storage, then redeploy.';
   }
 }
 
 async function uploadImages(files: File[], slug: string) {
   return Promise.all(
-    files.map(async (file) => (await put(`products/${slug}-${file.name}`, file, { access: 'public', addRandomSuffix: true })).url),
+    files.map((file) => uploadProductImage(`products/${slug}-${file.name}`, file)),
   );
 }
 
@@ -240,8 +235,7 @@ export async function updateProductPhotos(formData: FormData): Promise<UpdateRes
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Save failed.' };
   }
-  const dropped = current.filter((url) => !images.includes(url) && isBlobUrl(url));
-  if (dropped.length) await del(dropped).catch((error) => console.error('Failed to delete product images', error));
+  await deleteUploadedImages(current.filter((url) => !images.includes(url)));
 
   await refreshStorefront();
   return { ok: true, message: 'Photos saved' };
@@ -370,10 +364,7 @@ export async function removeProduct(id: string): Promise<UpdateResult> {
       const product = customProducts.find((p) => p.id === id);
       if (!product) return { ok: false, message: 'Unknown product.' };
       await deleteCustomProduct(id);
-      const blobUrls = product.images.filter(isBlobUrl);
-      if (blobUrls.length && process.env.BLOB_READ_WRITE_TOKEN) {
-        await del(blobUrls).catch((error) => console.error('Failed to delete product images', error));
-      }
+      await deleteUploadedImages(product.images);
     }
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Remove failed.' };

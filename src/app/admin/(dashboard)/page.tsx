@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin-session';
 import { ButtonLink } from '@/components/ui/Button';
 import { isBackendAdminEnabled } from '@/lib/backend';
 import { SyncCatalogButton } from '@/components/admin/SyncCatalogButton';
+import { isBlobConfigured } from '@/lib/blob';
 import { ProductManager, type AdminProductRow } from '@/components/admin/ProductManager';
 import { LowStockAlert } from '@/components/admin/LowStockAlert';
 import { getRequests } from '@/app/admin/backend-actions';
@@ -77,7 +78,7 @@ export default async function AdminProductsPage() {
         </div>
       )}
 
-      <ProductManager rows={rows} disabled={!dbConnected} uploadsEnabled={Boolean(process.env.BLOB_READ_WRITE_TOKEN)} />
+      <ProductManager rows={rows} disabled={!dbConnected} uploadsEnabled={isBlobConfigured()} />
     </div>
   );
 }
