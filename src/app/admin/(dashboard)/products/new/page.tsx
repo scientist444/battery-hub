@@ -3,12 +3,13 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { requireAdmin } from '@/lib/admin-session';
 import { ProductForm } from '@/components/admin/ProductForm';
+import { isBlobConfigured } from '@/lib/blob';
 
 export const metadata: Metadata = { title: 'Add product' };
 
 export default async function NewProductPage() {
   await requireAdmin();
-  const uploadsEnabled = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const uploadsEnabled = isBlobConfigured();
 
   return (
     <div className="mx-auto max-w-3xl">
