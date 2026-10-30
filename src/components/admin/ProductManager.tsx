@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { RotateCcw, Search, Trash2, Undo2 } from 'lucide-react';
+import { Images, RotateCcw, Search, Trash2, Undo2 } from 'lucide-react';
 import { Product, ProductOverride } from '@/types';
 import { categoryLabels } from '@/data/products';
 import { STORE_CATEGORIES } from '@/config/store';
@@ -13,6 +13,7 @@ import { removeProduct, resetProduct, restoreProduct, updateProduct } from '@/ap
 import { Button } from '@/components/ui/Button';
 import { StockBadge } from '@/components/ui/StockBadge';
 import { TextField } from '@/components/admin/TextField';
+import { PhotoEditor } from '@/components/admin/PhotoEditor';
 
 export interface AdminProductRow {
   product: Product;
@@ -26,9 +27,10 @@ export interface AdminProductRow {
 interface ProductManagerProps {
   rows: AdminProductRow[];
   disabled?: boolean;
+  uploadsEnabled?: boolean;
 }
 
-export function ProductManager({ rows: allRows, disabled }: ProductManagerProps) {
+export function ProductManager({ rows: allRows, disabled, uploadsEnabled }: ProductManagerProps) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
 
@@ -67,33 +69,39 @@ export function ProductManager({ rows: allRows, disabled }: ProductManagerProps)
         <p className="text-sm text-slate-500">{rows.length} products</p>
       </div>
 
-      <div className="hidden grid-cols-[1fr,120px,120px,110px,190px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 lg:grid">
+      <div className="hidden grid-cols-[1fr,110px,110px,110px,110px,220px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 lg:grid">
         <span>Product</span>
         <span>Price (Rs.)</span>
         <span>Stock (units)</span>
+        <span>Weight (g)</span>
         <span>Status</span>
         <span />
       </div>
 
       <ul className="divide-y divide-slate-200">
         {rows.map((row) => (
-          <ProductRow key={row.product.id} row={row} disabled={disabled} />
+          <ProductRow key={row.product.id} row={row} disabled={disabled} uploadsEnabled={uploadsEnabled} />
         ))}
       </ul>
     </div>
   );
 }
 
-function ProductRow({ row, disabled }: { row: AdminProductRow; disabled?: boolean }) {
+function ProductRow({ row, disabled, uploadsEnabled }: { row: AdminProductRow; disabled?: boolean; uploadsEnabled?: boolean }) {
   const { product, override, custom, removed } = row;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [price, setPrice] = useState(override?.price?.toString() ?? '');
   const [stock, setStock] = useState(override?.stock?.toString() ?? '');
+  // Admin-added products keep their weight on the product; spreadsheet products in the override.
+  const savedWeight = (custom ? product.weightG : override?.weightG)?.toString() ?? '';
+  const [weight, setWeight] = useState(savedWeight);
+  const [editingPhotos, setEditingPhotos] = useState(false);
 
   const defaultPrice = parsePrice(product.price);
-  const dirty = price !== (override?.price?.toString() ?? '') || stock !== (override?.stock?.toString() ?? '');
+  const dirty =
+    price !== (override?.price?.toString() ?? '') || stock !== (override?.stock?.toString() ?? '') || weight !== savedWeight;
   const preview = applyOverride(product, {
     price: price === '' ? undefined : Number(price),
     stock: stock === '' ? undefined : Number(stock),
@@ -113,6 +121,7 @@ function ProductRow({ row, disabled }: { row: AdminProductRow; disabled?: boolea
       if (result.ok) {
         setPrice('');
         setStock('');
+        setWeight(custom ? product.weightG?.toString() ?? '' : '');
       }
       return result;
     });
@@ -126,7 +135,7 @@ function ProductRow({ row, disabled }: { row: AdminProductRow; disabled?: boolea
 
   return (
     <li className={removed ? 'bg-slate-50 opacity-60' : undefined}>
-      <form action={save} className="grid items-center gap-3 p-4 lg:grid-cols-[1fr,120px,120px,110px,190px] lg:gap-4">
+      <form action={save} className="grid items-center gap-3 p-4 lg:grid-cols-[1fr,110px,110px,110px,110px,220px] lg:gap-4">
         <input type="hidden" name="id" value={product.id} />
         <div className="flex min-w-0 items-center gap-3">
           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-slate-50 ring-1 ring-slate-200">
@@ -143,10 +152,10 @@ function ProductRow({ row, disabled }: { row: AdminProductRow; disabled?: boolea
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:contents">
+        <div className="grid grid-cols-3 gap-3 lg:contents">
           <TextField
             label="Price (Rs.)"
-            hideLabel
+            labelClassName="text-xs lg:sr-only"
             name="price"
             inputMode="numeric"
             pattern="[0-9]*"
@@ -156,14 +165,26 @@ function ProductRow({ row, disabled }: { row: AdminProductRow; disabled?: boolea
             disabled={disabled || removed}
           />
           <TextField
-            label="Stock (units)"
-            hideLabel
+            label="Stock"
+            labelClassName="text-xs lg:sr-only"
             name="stock"
             inputMode="numeric"
             pattern="[0-9]*"
             placeholder={product.stockQty?.toString() ?? 'Not tracked'}
             value={stock}
             onChange={(e) => setStock(e.target.value.replace(/[^0-9]/g, ''))}
+            disabled={disabled || removed}
+          />
+          <TextField
+            label="Weight (g)"
+            labelClassName="text-xs lg:sr-only"
+            name="weight"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Estimate"
+            title="One unit with its box, in grams. Empty uses our estimate."
+            value={weight}
+            onChange={(e) => setWeight(e.target.value.replace(/[^0-9]/g, ''))}
             disabled={disabled || removed}
           />
         </div>
@@ -185,6 +206,19 @@ function ProductRow({ row, disabled }: { row: AdminProductRow; disabled?: boolea
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
+          {!removed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditingPhotos((open) => !open)}
+              disabled={disabled}
+              title="Change photos"
+              aria-label="Change photos"
+              aria-expanded={editingPhotos}
+            >
+              <Images className="h-4 w-4" /> <span className="lg:sr-only">Photos</span>
+            </Button>
+          )}
           {override && !removed && (
             <Button variant="ghost" size="sm" onClick={reset} disabled={disabled || pending} title="Reset to catalog defaults" aria-label="Reset to catalog defaults">
               <RotateCcw className="h-4 w-4" />
@@ -197,6 +231,20 @@ function ProductRow({ row, disabled }: { row: AdminProductRow; disabled?: boolea
           )}
         </div>
       </form>
+      {editingPhotos && !removed && (
+        <PhotoEditor
+          productId={product.id}
+          images={product.images}
+          uploadsEnabled={Boolean(uploadsEnabled)}
+          onDone={(saved) => {
+            setEditingPhotos(false);
+            if (saved) {
+              setMessage({ ok: true, text: 'Photos saved' });
+              router.refresh();
+            }
+          }}
+        />
+      )}
     </li>
   );
 }

@@ -2,7 +2,8 @@ import { SignJWT, jwtVerify } from 'jose';
 
 // Kept free of Node-only APIs so middleware (edge runtime) can import it.
 export const ADMIN_COOKIE = 'bh_admin_session';
-export const SESSION_TTL_SECONDS = 60 * 60 * 8;
+// 30 days, so the admin app on the phone stays signed in. Sign out on a shared device.
+export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 function getSecret() {
   const secret = process.env.ADMIN_SESSION_SECRET;

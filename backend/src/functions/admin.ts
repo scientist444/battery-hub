@@ -65,12 +65,15 @@ app.http('adminCatalogSync', {
     let updated = 0;
     let deactivated = 0;
 
-    for (const fields of incoming) {
+    for (const { weightG, ...fields } of incoming) {
       const current = existing.get(fields.id);
       existing.delete(fields.id);
       const next: Product = current
         ? { ...current, ...fields, active: true, updatedAt: now }
         : { ...fields, containsLithium: fields.categoryId === 'batteries', suppliers: [], active: true, updatedAt: now };
+      // The admin's weight wins; none set falls back to the estimate in weights.ts.
+      if (weightG) next.weightG = weightG;
+      else delete next.weightG;
       if (current && JSON.stringify({ ...current, updatedAt: now }) === JSON.stringify(next)) continue;
       if (current && current.categoryId !== next.categoryId) {
         await container('products').item(current.id, current.categoryId).delete();

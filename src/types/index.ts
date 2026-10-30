@@ -22,6 +22,8 @@ export interface Product {
   featured?: boolean;
   /** Units on hand, set from the admin panel. Undefined means not tracked. */
   stockQty?: number;
+  /** Weight of one unit with its box, in grams, for delivery charges. Undefined uses the API's estimate. */
+  weightG?: number;
   /** Approved customer reviews, when there are any. */
   rating?: { average: number; count: number };
 }
@@ -30,6 +32,9 @@ export interface Product {
 export interface ProductOverride {
   price?: number;
   stock?: number;
+  weightG?: number;
+  /** Replaces the product's photos; the first is the main photo. */
+  images?: string[];
   updatedAt?: string;
 }
 

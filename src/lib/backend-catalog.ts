@@ -23,6 +23,8 @@ export async function pushCatalog() {
       pricePkr: parsePrice(p.price),
       stock: typeof p.stockQty === 'number' ? Math.max(p.stockQty, 0) : isInStock(p) ? null : 0,
       featured: Boolean(p.featured),
+      // The admin owns weights; null lets the API use its estimate for the product.
+      weightG: p.weightG ?? null,
     }));
   return backendFetch<{ created: number; updated: number; deactivated: number; unchanged: number }>('admin', 'manage/catalog/sync', {
     body: { products },

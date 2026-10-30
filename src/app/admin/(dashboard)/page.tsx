@@ -56,7 +56,7 @@ export default async function AdminProductsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-950">Products</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Add, remove, or update price and stock. Changes go live on the store right after saving.
+            Add, remove, or update price, stock, weight and photos. Changes go live on the store right after saving.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -77,7 +77,7 @@ export default async function AdminProductsPage() {
         </div>
       )}
 
-      <ProductManager rows={rows} disabled={!dbConnected} />
+      <ProductManager rows={rows} disabled={!dbConnected} uploadsEnabled={Boolean(process.env.BLOB_READ_WRITE_TOKEN)} />
     </div>
   );
 }
