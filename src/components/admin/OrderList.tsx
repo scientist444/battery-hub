@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { addTrackingNumber, bookWithTrax, refreshOrderTracking, setOrderStatus, type AdminOrder } from '@/app/admin/backend-actions';
+import { addTrackingNumber, bookWithTrax, deleteOrder, refreshOrderTracking, setOrderStatus, type AdminOrder } from '@/app/admin/backend-actions';
 import { formatRupees } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
@@ -201,6 +201,21 @@ function OrderCard({ order }: { order: AdminOrder }) {
             onClick={() => run(() => setOrderStatus(order.id, 'cancelled'), `Cancel ${order.number}? Stock is added back.`)}
           >
             Cancel order
+          </Button>
+          {message && <span className={cn('text-sm', message.ok ? 'text-emerald-700' : 'text-red-700')}>{message.text}</span>}
+        </div>
+      )}
+
+      {['cancelled', 'returned'].includes(order.status) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-red-700"
+            disabled={pending}
+            onClick={() => run(() => deleteOrder(order.id), `Delete ${order.number} permanently? This cannot be undone.`)}
+          >
+            Delete order
           </Button>
           {message && <span className={cn('text-sm', message.ok ? 'text-emerald-700' : 'text-red-700')}>{message.text}</span>}
         </div>

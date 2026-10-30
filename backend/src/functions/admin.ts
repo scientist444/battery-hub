@@ -204,6 +204,20 @@ app.http('adminOrderStatus', {
   }),
 });
 
+/** Remove an order for good (e.g. test orders). Only cancelled or returned orders, so stock and Trax are already settled. */
+app.http('adminOrderDelete', {
+  methods: ['DELETE'],
+  route: 'manage/orders/{id}',
+  authLevel: 'anonymous',
+  handler: route('admin', async (request) => {
+    const found = await getOrder(request.params.id);
+    if (!found) throw new HttpError(404, 'Order not found.');
+    if (!['cancelled', 'returned'].includes(found.doc.status)) throw new HttpError(409, 'Cancel the order first, then delete it.');
+    await container('orders').item(found.doc.id, found.doc.id).delete();
+    return json({ deleted: found.doc.number });
+  }),
+});
+
 app.http('adminOrderBook', {
   methods: ['POST'],
   route: 'manage/orders/{id}/book',
