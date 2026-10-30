@@ -113,7 +113,7 @@ export const manualTrackingSchema = z.object({
   trackingNumber: z.string().trim().min(4).max(40),
 });
 
-/** Storefront-owned product fields, pushed by the website admin. Shipping fields (weight, box, suppliers) stay as set in the API. */
+/** Storefront-owned product fields, pushed by the website admin (including weight). Box size and suppliers stay as set in the API. */
 export const catalogSyncSchema = z.object({
   products: z
     .array(
@@ -129,6 +129,9 @@ export const catalogSyncSchema = z.object({
         pricePkr: true,
         stock: true,
         featured: true,
+      }).extend({
+        // Set in the website admin. null (or missing) means none set: the API uses its estimate.
+        weightG: z.number().int().positive().max(100000).nullable().optional(),
       }),
     )
     .max(2000),

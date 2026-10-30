@@ -88,3 +88,12 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-slate-400;
 }
+
+/* iPhone zooms into any form field under 16px when tapped; keep admin fields at 16px on phones. */
+@media (max-width: 1023px) {
+  .admin-shell input:not([type='checkbox']):not([type='radio']),
+  .admin-shell select,
+  .admin-shell textarea {
+    font-size: 16px;
+  }
+}

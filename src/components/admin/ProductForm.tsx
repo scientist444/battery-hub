@@ -7,32 +7,9 @@ import { createProduct, type ProductFormState } from '@/app/admin/actions';
 import { STORE_CATEGORIES } from '@/config/store';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { TextField } from '@/components/admin/TextField';
+import { MAX_UPLOAD_BYTES, resizeImage } from '@/lib/resize-image';
 
 const MAX_IMAGES = 6;
-const MAX_DIMENSION = 1600;
-
-/** Shrink a photo to at most 1600px and re-encode as JPEG so uploads stay well under Vercel's limit. */
-async function resizeImage(file: File): Promise<File> {
-  if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') return file;
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return file;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-    if (!blob) return file;
-    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
-  } catch {
-    return file;
-  }
-}
-
 const specFields = [
   { name: 'voltage', label: 'Voltage', placeholder: 'e.g. 3.7V' },
   { name: 'current', label: 'Current', placeholder: 'e.g. 2A max' },
@@ -70,7 +47,7 @@ export function ProductForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
     const resized = await Promise.all(photos.map((photo) => resizeImage(photo.file)));
     setPreparing(false);
     const totalBytes = resized.reduce((sum, file) => sum + file.size, 0);
-    if (totalBytes > 3.5 * 1024 * 1024) {
+    if (totalBytes > MAX_UPLOAD_BYTES) {
       setLocalError('Photos are too large together. Remove one or two and try again.');
       return;
     }
@@ -103,6 +80,12 @@ export function ProductForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
           </div>
           <TextField label="Price (Rs.)" name="price" required inputMode="numeric" pattern="[0-9]+" placeholder="e.g. 450" />
           <TextField label="Stock (units)" name="stock" inputMode="numeric" pattern="[0-9]*" placeholder="Leave empty if not tracked" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <TextField label="Weight (grams)" name="weight" inputMode="numeric" pattern="[0-9]*" placeholder="e.g. 450" />
+            <p className="mt-1 text-xs text-slate-500">One unit with its box. 1 kg = 1000 g. Used for the Trax delivery charge.</p>
+          </div>
         </div>
         <div>
           <label htmlFor="description" className="mb-1 block text-sm font-medium text-slate-700">Description</label>

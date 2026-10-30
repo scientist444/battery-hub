@@ -11,5 +11,10 @@ export function applyOverride(product: Product, override?: ProductOverride): Pro
     next.stockQty = override.stock;
     next.stockStatus = stockStatusFromQty(override.stock);
   }
+  if (typeof override.weightG === 'number') next.weightG = override.weightG;
+  if (override.images?.length) {
+    next.images = override.images;
+    next.image = override.images[0];
+  }
   return next;
 }

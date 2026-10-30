@@ -114,18 +114,28 @@ export async function updateProduct(formData: FormData): Promise<UpdateResult> {
 
   const price = parseWholeNumber(formData.get('price'));
   const stock = parseWholeNumber(formData.get('stock'));
+  const weightG = parseWholeNumber(formData.get('weight'));
   if (Number.isNaN(price) || (price !== undefined && price > 10_000_000)) {
     return { ok: false, message: 'Price must be a whole number of rupees.' };
   }
   if (Number.isNaN(stock) || (stock !== undefined && stock > 100_000)) {
     return { ok: false, message: 'Stock must be a whole number.' };
   }
+  const weightError = checkWeight(weightG);
+  if (weightError) return { ok: false, message: weightError };
 
   try {
-    if (price === undefined && stock === undefined) {
+    const state = await getCatalogState();
+    const custom = state.customProducts.find((p) => p.id === id);
+    // Admin-added products keep their weight on the product; spreadsheet products in the override.
+    if (custom && custom.weightG !== weightG) await saveCustomProduct({ ...custom, weightG });
+    const overrideWeight = custom ? undefined : weightG;
+    // Photos are edited separately; keep them.
+    const { images } = state.overrides[id] ?? {};
+    if (price === undefined && stock === undefined && overrideWeight === undefined && !images) {
       await deleteOverride(id);
     } else {
-      await saveOverride(id, { price, stock });
+      await saveOverride(id, { price, stock, weightG: overrideWeight, images });
     }
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Save failed.' };
@@ -138,12 +148,103 @@ export async function updateProduct(formData: FormData): Promise<UpdateResult> {
 export async function resetProduct(id: string): Promise<UpdateResult> {
   await requireAdmin();
   try {
+    // Photos uploaded for a spreadsheet product go back to the spreadsheet photos.
+    const uploaded = isBaseProduct(id) ? ((await getCatalogState()).overrides[id]?.images ?? []).filter(isBlobUrl) : [];
     await deleteOverride(id);
+    if (uploaded.length) await del(uploaded).catch((error) => console.error('Failed to delete product images', error));
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Reset failed.' };
   }
   await refreshStorefront();
   return { ok: true, message: 'Reset to catalog defaults' };
+}
+
+function checkWeight(weightG: number | undefined) {
+  if (Number.isNaN(weightG) || (weightG !== undefined && (weightG <= 0 || weightG > 100_000))) {
+    return 'Weight must be in grams, e.g. 450 (1 kg = 1000 g).';
+  }
+}
+
+/** Only photos uploaded from the admin live in Vercel Blob; spreadsheet photos are files in /public. */
+function isBlobUrl(url: string) {
+  return /^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//.test(url);
+}
+
+function imageFiles(formData: FormData) {
+  return formData.getAll('images').filter((value): value is File => value instanceof File && value.size > 0);
+}
+
+function checkImageFiles(files: File[]) {
+  if (files.length > MAX_IMAGES) return `Upload at most ${MAX_IMAGES} photos.`;
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) return `${file.name} is not an image.`;
+    if (file.size > MAX_IMAGE_BYTES) return `${file.name} is larger than 4 MB.`;
+  }
+  if (files.length > 0 && !process.env.BLOB_READ_WRITE_TOKEN) {
+    return 'Photo upload needs Vercel Blob storage. Connect it in Vercel > Storage, then redeploy.';
+  }
+}
+
+async function uploadImages(files: File[], slug: string) {
+  return Promise.all(
+    files.map(async (file) => (await put(`products/${slug}-${file.name}`, file, { access: 'public', addRandomSuffix: true })).url),
+  );
+}
+
+/**
+ * Change an existing product's photos. `order` lists the final photos, first = main:
+ * `url:<existing photo>` keeps one, `new:<n>` is the n-th uploaded file.
+ */
+export async function updateProductPhotos(formData: FormData): Promise<UpdateResult> {
+  await requireAdmin();
+  const id = String(formData.get('id') ?? '');
+  const state = await getCatalogState();
+  const custom = state.customProducts.find((p) => p.id === id);
+  const base = baseProducts.find((p) => p.id === id);
+  const product = custom ?? base;
+  if (!product) return { ok: false, message: 'Unknown product.' };
+
+  const current = (!custom && state.overrides[id]?.images) || product.images;
+  const files = imageFiles(formData);
+  const order = formData.getAll('order').map(String);
+  const fileError = checkImageFiles(files);
+  if (fileError) return { ok: false, message: fileError };
+  if (order.length === 0) return { ok: false, message: 'Keep at least one photo.' };
+  // Spreadsheet products can already have more than the upload limit; they keep them.
+  const limit = Math.max(MAX_IMAGES, current.length);
+  if (order.length > limit) return { ok: false, message: `Use at most ${limit} photos.` };
+
+  let uploaded: string[];
+  try {
+    uploaded = await uploadImages(files, product.slug);
+  } catch (error) {
+    console.error('Image upload failed', error);
+    return { ok: false, message: 'Photo upload failed. Try smaller images or try again.' };
+  }
+
+  const images: string[] = [];
+  for (const entry of order) {
+    if (entry.startsWith('url:') && current.includes(entry.slice(4))) images.push(entry.slice(4));
+    else if (entry.startsWith('new:') && uploaded[Number(entry.slice(4))]) images.push(uploaded[Number(entry.slice(4))]);
+  }
+  if (images.length === 0) return { ok: false, message: 'Keep at least one photo.' };
+
+  try {
+    if (custom) {
+      // Admin-added products own their photos.
+      await saveCustomProduct({ ...custom, images, image: images[0] });
+    } else {
+      const sameAsCatalog = images.join('\n') === product.images.join('\n');
+      await saveOverride(id, { ...state.overrides[id], images: sameAsCatalog ? undefined : images });
+    }
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : 'Save failed.' };
+  }
+  const dropped = current.filter((url) => !images.includes(url) && isBlobUrl(url));
+  if (dropped.length) await del(dropped).catch((error) => console.error('Failed to delete product images', error));
+
+  await refreshStorefront();
+  return { ok: true, message: 'Photos saved' };
 }
 
 // Adding and removing products
@@ -201,18 +302,13 @@ export async function createProduct(_prev: ProductFormState, formData: FormData)
   if (!STORE_CATEGORIES.some((c) => c.id === category)) return { error: 'Choose a category.' };
   if (price === undefined || Number.isNaN(price) || price <= 0) return { error: 'Enter a price in rupees.' };
   if (Number.isNaN(stock)) return { error: 'Stock must be a whole number.' };
+  const weightG = parseWholeNumber(formData.get('weight'));
+  const weightError = checkWeight(weightG);
+  if (weightError) return { error: weightError };
 
-  const files = formData
-    .getAll('images')
-    .filter((value): value is File => value instanceof File && value.size > 0);
-  if (files.length > MAX_IMAGES) return { error: `Upload at most ${MAX_IMAGES} photos.` };
-  for (const file of files) {
-    if (!file.type.startsWith('image/')) return { error: `${file.name} is not an image.` };
-    if (file.size > MAX_IMAGE_BYTES) return { error: `${file.name} is larger than 4 MB.` };
-  }
-  if (files.length > 0 && !process.env.BLOB_READ_WRITE_TOKEN) {
-    return { error: 'Photo upload needs Vercel Blob storage. Connect it in Vercel > Storage, then redeploy.' };
-  }
+  const files = imageFiles(formData);
+  const fileError = checkImageFiles(files);
+  if (fileError) return { error: fileError };
 
   const { customProducts } = await getCatalogState();
   const takenSlugs = new Set([...baseProducts, ...customProducts].map((p) => p.slug));
@@ -222,12 +318,7 @@ export async function createProduct(_prev: ProductFormState, formData: FormData)
 
   let images: string[];
   try {
-    images = await Promise.all(
-      files.map(async (file) => {
-        const blob = await put(`products/${slug}-${file.name}`, file, { access: 'public', addRandomSuffix: true });
-        return blob.url;
-      }),
-    );
+    images = await uploadImages(files, slug);
   } catch (error) {
     console.error('Image upload failed', error);
     return { error: 'Photo upload failed. Try smaller images or try again.' };
@@ -250,6 +341,7 @@ export async function createProduct(_prev: ProductFormState, formData: FormData)
     availability: 'Available in Islamabad & Rawalpindi',
     stockStatus: stock === undefined ? 'In Stock' : stockStatusFromQty(stock),
     stockQty: stock,
+    weightG,
     specs,
     description: field(formData, 'description', 2000) || `${name}. Please confirm compatibility before ordering.`,
     whatsappText: createProductOrderMessage(name, id),
@@ -278,7 +370,7 @@ export async function removeProduct(id: string): Promise<UpdateResult> {
       const product = customProducts.find((p) => p.id === id);
       if (!product) return { ok: false, message: 'Unknown product.' };
       await deleteCustomProduct(id);
-      const blobUrls = product.images.filter((url) => url.startsWith('https://'));
+      const blobUrls = product.images.filter(isBlobUrl);
       if (blobUrls.length && process.env.BLOB_READ_WRITE_TOKEN) {
         await del(blobUrls).catch((error) => console.error('Failed to delete product images', error));
       }

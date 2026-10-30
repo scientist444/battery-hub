@@ -4,17 +4,18 @@ import { cn } from '@/lib/cn';
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   hideLabel?: boolean;
+  labelClassName?: string;
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
-  { label, hideLabel, className, id, ...props },
+  { label, hideLabel, labelClassName, className, id, ...props },
   ref,
 ) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   return (
     <div>
-      <label htmlFor={inputId} className={cn('mb-1 block text-sm font-medium text-slate-700', hideLabel && 'sr-only')}>
+      <label htmlFor={inputId} className={cn('mb-1 block text-sm font-medium text-slate-700', hideLabel && 'sr-only', labelClassName)}>
         {label}
       </label>
       <input

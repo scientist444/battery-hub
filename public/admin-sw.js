@@ -11,14 +11,18 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Battery HUB', {
-      body: data.body || '',
-      icon: '/admin-app/icon-192.png',
-      tag: data.tag,
-      renotify: Boolean(data.tag),
-      vibrate: [200, 100, 200],
-      data: { url: data.url || '/admin/orders' },
-    }),
+    Promise.all([
+      // Open admin screens reload their data.
+      self.clients.matchAll({ type: 'window' }).then((windows) => windows.forEach((w) => w.postMessage({ type: 'new-order' }))),
+      self.registration.showNotification(data.title || 'Battery HUB', {
+        body: data.body || '',
+        icon: '/admin-app/icon-192.png',
+        tag: data.tag,
+        renotify: Boolean(data.tag),
+        vibrate: [200, 100, 200],
+        data: { url: data.url || '/admin/orders' },
+      }),
+    ]),
   );
 });
 
