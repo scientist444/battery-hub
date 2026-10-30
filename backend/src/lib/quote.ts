@@ -99,13 +99,14 @@ export async function buildQuote(lines: CartLine[], cityId: string, preferredSer
         services.map(async (service): Promise<ServiceOption | undefined> => {
           try {
             const feePkr = await ctx.rate(origin, city, weightBand(weightG), subtotalPkr, service);
-            return { code: service.code, name: service.name, etaDays: service.etaDays, feePkr };
+            // Trax does not publish delivery times per service, so no day estimate is shown for live rates.
+            return { code: service.code, name: service.name, feePkr };
           } catch {
             return undefined;
           }
         }),
       );
-      options = priced.filter((o): o is ServiceOption => Boolean(o));
+      options = priced.filter((o): o is ServiceOption => Boolean(o)).sort((a, b) => a.feePkr - b.feePkr);
       if (options.length === 0) {
         feeEstimated = true;
         options = services.map((s) => ({ code: s.code, name: s.name, etaDays: s.etaDays, feePkr: flatFee }));
@@ -119,7 +120,9 @@ export async function buildQuote(lines: CartLine[], cityId: string, preferredSer
       preferredService && (settings.allowCustomerServiceChoice || preferredService === INSTANT.code)
         ? options.find((o) => o.code === preferredService)
         : undefined;
-    const chosen = requested ?? chooseService(settings, weightG, courierOptions)!;
+    // With live Trax prices the weight rules don't apply: the default is the cheapest service.
+    const chooseSettings = settings.courierMode === 'trax' && !feeEstimated ? { ...settings, weightRules: [] } : settings;
+    const chosen = requested ?? chooseService(chooseSettings, weightG, courierOptions)!;
     shipments.push({ supplierId, pickup, origin, itemIndexes, weightG, weightEstimated, containsLithium, subtotalPkr, options, chosen, feeEstimated });
   }
 
