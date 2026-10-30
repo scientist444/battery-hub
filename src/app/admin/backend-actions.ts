@@ -135,6 +135,17 @@ export async function setOrderStatus(orderId: string, status: string, note?: str
   return { ok: true, message: 'Updated' };
 }
 
+export async function deleteOrder(orderId: string): Promise<UpdateResult> {
+  await requireAdmin();
+  try {
+    await backendFetch('admin', `manage/orders/${encodeURIComponent(orderId)}`, { method: 'DELETE' });
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath('/admin/orders');
+  return { ok: true, message: 'Deleted' };
+}
+
 export async function addTrackingNumber(orderId: string, shipmentIndex: number, trackingNumber: string): Promise<UpdateResult> {
   await requireAdmin();
   try {

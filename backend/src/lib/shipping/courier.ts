@@ -6,7 +6,7 @@ export interface RateRequest {
   weightG: number;
   codAmountPkr: number;
   service: CourierService;
-  /** Defaults to a short wait so checkout never hangs on the courier. */
+  /** Defaults to 5 s: long enough for Trax to answer, short enough that checkout doesn't hang. Rates are cached afterwards. */
   timeoutMs?: number;
 }
 
