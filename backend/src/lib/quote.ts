@@ -4,6 +4,7 @@ import { primarySupplierId } from './catalog';
 import { flatRate } from './shipping/flat';
 import { INSTANT, ServiceOption, allowedServices, chooseService, instantAvailable, weightBand } from './shipping/select';
 import { City, CourierService, Product, StoreSettings, Supplier, SupplierLocation } from './types';
+import { productWeightG } from './weights';
 
 export interface CartLine {
   productId: string;
@@ -78,8 +79,8 @@ export async function buildQuote(lines: CartLine[], cityId: string, preferredSer
     if (!supplier || !pickup || !origin) throw new HttpError(500, `Supplier ${supplierId} has no active pickup address.`);
 
     const groupLines = itemIndexes.map((i) => resolved[i]);
-    const weightEstimated = groupLines.some((l) => !l.product.weightG);
-    const weightG = settings.packagingG + groupLines.reduce((sum, l) => sum + (l.product.weightG ?? settings.defaultWeightG) * l.qty, 0);
+    const weightEstimated = groupLines.some((l) => !productWeightG(l.product));
+    const weightG = settings.packagingG + groupLines.reduce((sum, l) => sum + (productWeightG(l.product) ?? settings.defaultWeightG) * l.qty, 0);
     const containsLithium = groupLines.some((l) => l.product.containsLithium);
     const subtotalPkr = groupLines.reduce((sum, l) => sum + l.product.pricePkr * l.qty, 0);
     const flatFee = flatRate(settings.flatRates, origin, city, weightG);
